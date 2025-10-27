@@ -1,24 +1,32 @@
 "use client";
 
-import { Plus, Search, Calendar as CalendarIcon } from "lucide-react";
+import { Plus, Search, Calendar as CalendarIcon, Menu } from "lucide-react";
 import { ViewType } from "./CalendarApp";
 
 interface HeaderProps {
   view: ViewType;
   setView: (view: ViewType) => void;
   currentDate: Date;
+  sidebarOpen: boolean;
+  setSidebarOpen: (open: boolean) => void;
 }
 
-export default function Header({ view, setView, currentDate }: HeaderProps) {
+export default function Header({ view, setView, currentDate, sidebarOpen, setSidebarOpen }: HeaderProps) {
   return (
-  <div className="flex items-center justify-between p-4 border-b border-gray-200">
+  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 sm:p-4 border-b border-gray-200 gap-3 sm:gap-0">
       {/* left: logo + search */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2 sm:gap-4 w-full sm:w-auto">
+        <button 
+          onClick={() => setSidebarOpen(!sidebarOpen)}
+          className="lg:hidden p-1 hover:bg-gray-100 rounded"
+        >
+          <Menu className="w-5 h-5" />
+        </button>
         <button className="flex items-center gap-2 text-blue-600 font-semibold">
           <CalendarIcon className="w-5 h-5" />
-          Calendar
+          <span className="hidden sm:inline">Calendar</span>
         </button>
-        <div className="hidden md:flex items-center bg-gray-100 rounded-lg px-3 py-2 w-64">
+        <div className="flex items-center bg-gray-100 rounded-lg px-3 py-2 flex-1 sm:w-64">
           <Search className="w-4 h-4 text-gray-500 mr-2" />
           <input
             type="text"
@@ -29,13 +37,13 @@ export default function Header({ view, setView, currentDate }: HeaderProps) {
       </div>
 
       {/* center: view toggle */}
-      <div className="flex-1 flex items-center justify-center">
-        <div className="flex items-center gap-4">
-          <div className="text-sm text-gray-500 hidden sm:block">{formatDateRange(currentDate, view)}</div>
+      <div className="flex-1 flex items-center justify-center w-full sm:w-auto">
+        <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4">
+          <div className="text-sm text-gray-500 text-center sm:text-left">{formatDateRange(currentDate, view)}</div>
           <div className="bg-gray-100 p-1 rounded-full flex items-center gap-1">
             <button
               onClick={() => setView("week")}
-              className={`px-4 py-2 rounded-full text-sm font-semibold transition-colors ${
+              className={`px-3 sm:px-4 py-2 rounded-full text-xs sm:text-sm font-semibold transition-colors ${
                 view === "week" ? "bg-white shadow-sm text-gray-900" : "text-gray-600"
               }`}
             >
@@ -43,7 +51,7 @@ export default function Header({ view, setView, currentDate }: HeaderProps) {
             </button>
             <button
               onClick={() => setView("month")}
-              className={`px-4 py-2 rounded-full text-sm font-semibold transition-colors ${
+              className={`px-3 sm:px-4 py-2 rounded-full text-xs sm:text-sm font-semibold transition-colors ${
                 view === "month" ? "bg-white shadow-sm text-gray-900" : "text-gray-600"
               }`}
             >
@@ -54,22 +62,22 @@ export default function Header({ view, setView, currentDate }: HeaderProps) {
       </div>
 
       {/* right: create + avatars */}
-      <div className="flex items-center gap-3">
-        <button className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-md shadow hover:bg-blue-700">
+      <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto justify-between sm:justify-end">
+        <button className="flex items-center gap-2 bg-blue-600 text-white px-3 sm:px-4 py-2 rounded-md shadow hover:bg-blue-700 text-sm">
           <Plus className="w-4 h-4" />
-          CREATE
+          <span className="hidden sm:inline">CREATE</span>
         </button>
         <div className="flex -space-x-2 items-center">
           {["JF", "HT"].map((initial, i) => (
             <div
               key={i}
-              className="w-8 h-8 rounded-full bg-gray-600 text-white flex items-center justify-center text-xs font-medium border-2 border-white"
+              className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-gray-600 text-white flex items-center justify-center text-xs font-medium border-2 border-white"
             >
               {initial}
             </div>
           ))}
         </div>
-        <span className="text-sm font-medium">Rach Smith</span>
+        <span className="text-xs sm:text-sm font-medium hidden sm:inline">Rach Smith</span>
       </div>
     </div>
   );

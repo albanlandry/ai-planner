@@ -70,7 +70,7 @@ export default function WeekView({ currentDate }: WeekViewProps) {
   );
 
   return (
-    <div className="grid grid-cols-8 gap-0 border border-gray-100 rounded-lg overflow-hidden">
+    <div className="grid grid-cols-8 gap-0 border border-gray-100 rounded-lg overflow-hidden overflow-x-auto">
       <div className="col-span-1">
         <div className="h-12 border-b border-gray-100" />
         {Array.from({ length: 16 }, (_, i) => {

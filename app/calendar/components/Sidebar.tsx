@@ -39,7 +39,7 @@ export default function Sidebar({ currentDate, setCurrentDate }: SidebarProps) {
   const monthDays = eachDayOfInterval({ start: monthStart, end: monthEnd });
 
   return (
-    <div className="w-64 p-4 border-r border-gray-200 space-y-6">
+    <div className="w-full lg:w-64 p-3 lg:p-4 border-r border-gray-200 space-y-4 lg:space-y-6">
       <div className="flex items-center justify-between">
         <button
           onClick={() =>

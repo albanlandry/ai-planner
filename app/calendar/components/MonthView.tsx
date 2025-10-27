@@ -24,7 +24,7 @@ export default function MonthView({ currentDate }: MonthViewProps) {
   };
 
   return (
-    <div className="grid grid-cols-7 gap-0 border border-gray-100 rounded-lg overflow-hidden">
+    <div className="grid grid-cols-7 gap-0 border border-gray-100 rounded-lg overflow-hidden overflow-x-auto">
       {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
         <div
           key={d}
