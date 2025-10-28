@@ -12,6 +12,8 @@ class Event {
     this.location = data.location;
     this.attendees = data.attendees;
     this.recurrence_rule = data.recurrence_rule;
+    this.calendar_name = data.calendar_name;
+    this.calendar_color = data.calendar_color;
     this.created_at = data.created_at;
     this.updated_at = data.updated_at;
   }

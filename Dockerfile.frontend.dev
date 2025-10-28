@@ -11,7 +11,7 @@ RUN apk add --no-cache libc6-compat
 COPY package.json package-lock.json* ./
 
 # Install dependencies
-RUN npm install
+RUN npm install --legacy-peer-deps
 
 # Create non-root user
 RUN addgroup --system --gid 1001 nodejs
