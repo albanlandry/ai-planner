@@ -9,7 +9,8 @@ import {
   Users, 
   Bell,
   FileText,
-  ChevronRight
+  ChevronRight,
+  MessageSquare
 } from "lucide-react";
 
 interface NavItem {
@@ -30,7 +31,8 @@ export default function MainNavigation({ collapsed = false, onToggleCollapse, pe
   const pathname = usePathname();
 
   const navItems: NavItem[] = [
-    { id: 'calendar', label: 'Calendar', icon: CalendarIcon, href: '/calendar' },
+        { id: 'calendar', label: 'Calendar', icon: CalendarIcon, href: '/calendar' },
+        { id: 'ai', label: 'AI Assistant', icon: MessageSquare, href: '/ai' },
     { id: 'tasks', label: 'Tasks', icon: CheckSquare, href: '/tasks', badge: pendingTaskCount > 0 ? pendingTaskCount : undefined },
     { id: 'teams', label: 'Teams', icon: Users, href: '/teams' },
     { id: 'notifications', label: 'Notifications', icon: Bell, href: '/notifications', badge: 5 },

@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import { startOfWeek, endOfWeek, startOfMonth, endOfMonth } from "date-fns";
 import Header from "./Header";
-import MainNavigation from "./MainNavigation";
 import Sidebar from "./Sidebar";
 import WeekView from "./WeekView";
 import MonthView from "./MonthView";
@@ -27,13 +26,6 @@ export default function CalendarApp() {
   });
   const [currentDate, setCurrentDate] = useState(new Date());
   const [calendarSidebarOpen, setCalendarSidebarOpen] = useState(false);
-  const [navCollapsed, setNavCollapsed] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem('navCollapsed');
-      return stored === 'true';
-    }
-    return false;
-  });
   const [showEventForm, setShowEventForm] = useState(false);
   const [showCalendarForm, setShowCalendarForm] = useState(false);
   const [editingEvent, setEditingEvent] = useState<Event | undefined>();
@@ -53,7 +45,7 @@ export default function CalendarApp() {
     deleteCalendar
   } = useCalendarStore();
 
-  const { tasks, fetchTasks } = useTaskStore();
+  const { fetchTasks } = useTaskStore();
 
   // Note: fetchCurrentUser is already called by ProtectedRoute wrapper
   // No need to call it again here
@@ -67,11 +59,6 @@ export default function CalendarApp() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Calculate pending task count for navigation badge
-  const pendingTaskCount = tasks.filter(t => 
-    t.status === 'todo' || t.status === 'in_progress'
-  ).length;
-
   // Persist selected view to localStorage
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -79,12 +66,6 @@ export default function CalendarApp() {
     }
   }, [view]);
 
-  // Persist navigation collapsed state
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('navCollapsed', navCollapsed.toString());
-    }
-  }, [navCollapsed]);
 
   // Fetch events when date changes or calendars are loaded
   useEffect(() => {
@@ -213,58 +194,48 @@ export default function CalendarApp() {
   }
 
   return (
-    <div className="min-h-screen bg-white flex">
-      {/* Left Main Navigation */}
-      <MainNavigation 
-        collapsed={navCollapsed}
-        onToggleCollapse={() => setNavCollapsed(!navCollapsed)}
-        pendingTaskCount={pendingTaskCount}
+    <>
+      {/* Top Header */}
+      <Header
+        view={view}
+        setView={setView}
+        currentDate={currentDate}
+        sidebarOpen={calendarSidebarOpen}
+        setSidebarOpen={setCalendarSidebarOpen}
+        onCreateEvent={handleCreateEvent}
       />
 
-      {/* Main Content Area */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Top Header */}
-        <Header
-          view={view}
-          setView={setView}
-          currentDate={currentDate}
-          sidebarOpen={calendarSidebarOpen}
-          setSidebarOpen={setCalendarSidebarOpen}
-          onCreateEvent={handleCreateEvent}
-        />
-
-        {/* Calendar Content with Right Sidebar */}
-        <div className="flex-1 flex overflow-hidden bg-white">
-          {/* Main Calendar View */}
-          <div className="flex-1 overflow-auto p-2 sm:p-4">
-            {view === "week" ? (
-              <WeekView 
-                currentDate={currentDate} 
-                events={events}
-                onEventClick={handleEditEvent}
-                onEventDelete={handleDeleteEvent}
-              />
-            ) : (
-              <MonthView 
-                currentDate={currentDate}
-                events={events}
-                onEventClick={handleEditEvent}
-                onEventDelete={handleDeleteEvent}
-              />
-            )}
-          </div>
-
-          {/* Right Calendar Sidebar */}
-          <div className={`${calendarSidebarOpen ? 'block' : 'hidden'} lg:block border-l border-gray-200 overflow-y-auto`}>
-            <Sidebar 
+      {/* Calendar Content with Right Sidebar */}
+      <div className="flex-1 flex overflow-hidden bg-white">
+        {/* Main Calendar View */}
+        <div className="flex-1 overflow-auto p-2 sm:p-4">
+          {view === "week" ? (
+            <WeekView 
               currentDate={currentDate} 
-              setCurrentDate={setCurrentDate}
-              calendars={calendars}
-              onCreateCalendar={handleCreateCalendar}
-              onEditCalendar={handleEditCalendar}
-              onDeleteCalendar={handleDeleteCalendar}
+              events={events}
+              onEventClick={handleEditEvent}
+              onEventDelete={handleDeleteEvent}
             />
-          </div>
+          ) : (
+            <MonthView 
+              currentDate={currentDate}
+              events={events}
+              onEventClick={handleEditEvent}
+              onEventDelete={handleDeleteEvent}
+            />
+          )}
+        </div>
+
+        {/* Right Calendar Sidebar */}
+        <div className={`${calendarSidebarOpen ? 'block' : 'hidden'} lg:block border-l border-gray-200 overflow-y-auto`}>
+          <Sidebar 
+            currentDate={currentDate} 
+            setCurrentDate={setCurrentDate}
+            calendars={calendars}
+            onCreateCalendar={handleCreateCalendar}
+            onEditCalendar={handleEditCalendar}
+            onDeleteCalendar={handleDeleteCalendar}
+          />
         </div>
       </div>
 
@@ -292,6 +263,6 @@ export default function CalendarApp() {
           }}
         />
       )}
-    </div>
+    </>
   );
 }

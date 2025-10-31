@@ -291,6 +291,21 @@ class ApiService {
   async deleteTask(id: string) {
     return this.request(`/tasks/${id}`, { method: 'DELETE' });
   }
+
+  // AI endpoints
+  async aiHealth() {
+    return this.request<{ enabled: boolean; model: string; max_tokens: number; message: string }>(`/ai/health`);
+  }
+
+  async aiChat(body: { message: string; conversation_id?: string; model?: string; temperature?: number; max_tokens?: number }) {
+    return this.request<{ message: string; conversation_id: string; intent?: string; action?: any; token_usage?: any; execution_time_ms?: number }>(
+      `/ai/chat`,
+      {
+        method: 'POST',
+        body: JSON.stringify(body),
+      }
+    );
+  }
 }
 
 // Types

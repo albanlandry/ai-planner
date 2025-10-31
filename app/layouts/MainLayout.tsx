@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import dynamic from "next/dynamic";
+import { ChatbotProvider } from "@/app/providers/ChatbotProvider";
 import MainNavigation from "@/app/calendar/components/MainNavigation";
 import { useTaskStore } from "@/stores/taskStore";
 
@@ -40,19 +42,22 @@ export default function MainLayout({ children }: MainLayoutProps) {
   ).length;
 
   return (
-    <div className="min-h-screen bg-white flex">
-      {/* Left Main Navigation */}
-      <MainNavigation 
-        collapsed={navCollapsed}
-        onToggleCollapse={() => setNavCollapsed(!navCollapsed)}
-        pendingTaskCount={pendingTaskCount}
-      />
+    <ChatbotProvider floating={<AIFloatingChat />}>
+      <div className="min-h-screen bg-white flex">
+        {/* Left Main Navigation */}
+        <MainNavigation 
+          collapsed={navCollapsed}
+          onToggleCollapse={() => setNavCollapsed(!navCollapsed)}
+          pendingTaskCount={pendingTaskCount}
+        />
 
-      {/* Main Content Area */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {children}
+        {/* Main Content Area */}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {children}
+        </div>
       </div>
-    </div>
+    </ChatbotProvider>
   );
 }
+const AIFloatingChat = dynamic(() => import("@/app/components/AIFloatingChat"), { ssr: false });
 
