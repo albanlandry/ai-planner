@@ -187,8 +187,8 @@ export default function CalendarApp() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-100 to-pink-200 p-2 sm:p-4 lg:p-6">
-      <div className="max-w-7xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-pink-100 to-pink-200">
+      <div className="w-full bg-white overflow-hidden">
         <Header
           view={view}
           setView={setView}
