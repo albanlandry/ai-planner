@@ -17,10 +17,15 @@ class ApiError extends Error {
 class ApiService {
   private baseURL: string;
   private token: string | null = null;
+  private refreshTokenValue: string | null = null;
+  private isRefreshing: boolean = false;
 
   constructor(baseURL: string) {
     this.baseURL = baseURL;
-    this.token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+    if (typeof window !== 'undefined') {
+      this.token = localStorage.getItem('accessToken');
+      this.refreshTokenValue = localStorage.getItem('refreshToken');
+    }
   }
 
   setToken(token: string | null) {
@@ -34,9 +39,48 @@ class ApiService {
     }
   }
 
+  setRefreshToken(token: string | null) {
+    this.refreshTokenValue = token;
+    if (typeof window !== 'undefined') {
+      if (token) {
+        localStorage.setItem('refreshToken', token);
+      } else {
+        localStorage.removeItem('refreshToken');
+      }
+    }
+  }
+
+  async refreshAccessToken(): Promise<string | null> {
+    if (!this.refreshTokenValue || this.isRefreshing) {
+      return null;
+    }
+
+    try {
+      this.isRefreshing = true;
+      const response = await this.request<{
+        accessToken: string;
+        refreshToken: string;
+      }>('/auth/refresh', {
+        method: 'POST',
+        body: JSON.stringify({ refreshToken: this.refreshTokenValue }),
+      });
+
+      this.setToken(response.accessToken);
+      this.setRefreshToken(response.refreshToken);
+      return response.accessToken;
+    } catch (error) {
+      this.setToken(null);
+      this.setRefreshToken(null);
+      return null;
+    } finally {
+      this.isRefreshing = false;
+    }
+  }
+
   private async request<T>(
     endpoint: string,
-    options: RequestInit = {}
+    options: RequestInit = {},
+    retry: boolean = true
   ): Promise<T> {
     const url = `${this.baseURL}${endpoint}`;
     const headers: HeadersInit = {
@@ -55,17 +99,43 @@ class ApiService {
 
     try {
       const response = await fetch(url, config);
-      const data = await response.json();
 
+      // Check if response is OK before trying to parse JSON
       if (!response.ok) {
-        throw new ApiError(response.status, data.error || 'An error occurred');
+        // Try to parse error response
+        let errorData;
+        try {
+          errorData = await response.json();
+        } catch {
+          errorData = { error: `HTTP ${response.status} ${response.statusText}` };
+        }
+        
+        // If 401 and we have a refresh token, try to refresh
+        if (response.status === 401 && retry && this.refreshTokenValue && endpoint !== '/auth/refresh') {
+          const newToken = await this.refreshAccessToken();
+          if (newToken) {
+            // Retry the request with the new token
+            return this.request<T>(endpoint, options, false);
+          }
+        }
+        throw new ApiError(response.status, errorData.error || 'An error occurred');
       }
 
+      const data = await response.json();
       return data;
     } catch (error) {
       if (error instanceof ApiError) {
         throw error;
       }
+      
+      // Handle CORS and network errors more specifically
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        if (error.message.includes('Failed to fetch') || error.message.includes('CORS')) {
+          throw new ApiError(0, 'CORS error: Unable to connect to server. Please check that the backend is running and CORS is configured correctly.');
+        }
+        throw new ApiError(0, `Network error: ${error.message}`);
+      }
+      
       throw new ApiError(0, 'Network error');
     }
   }
@@ -82,6 +152,7 @@ class ApiService {
     });
     
     this.setToken(response.accessToken);
+    this.setRefreshToken(response.refreshToken);
     return response;
   }
 
@@ -96,16 +167,36 @@ class ApiService {
     });
     
     this.setToken(response.accessToken);
+    this.setRefreshToken(response.refreshToken);
     return response;
   }
 
   async logout() {
+    try {
     await this.request('/auth/logout', { method: 'POST' });
+    } catch (error) {
+      // Continue with logout even if request fails
+    }
     this.setToken(null);
+    this.setRefreshToken(null);
   }
 
   async getCurrentUser() {
     return this.request<{ user: User }>('/auth/me');
+  }
+
+  async updateProfile(data: { name?: string; avatar_url?: string }) {
+    return this.request<{ message: string; user: User }>('/auth/me', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async refreshToken() {
+    return this.request<{ accessToken: string; refreshToken: string }>('/auth/refresh', {
+      method: 'POST',
+      body: JSON.stringify({ refreshToken: this.refreshTokenValue }),
+    });
   }
 
   // Calendar endpoints

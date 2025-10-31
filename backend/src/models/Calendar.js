@@ -12,6 +12,14 @@ class Calendar {
   }
 
   static async create({ user_id, name, color = '#3B82F6', is_primary = false }) {
+    // If setting as primary, unset other primary calendars for this user
+    if (is_primary) {
+      await pool.query(
+        'UPDATE calendars SET is_primary = false, updated_at = NOW() WHERE user_id = $1 AND is_primary = true',
+        [user_id]
+      );
+    }
+
     const query = `
       INSERT INTO calendars (user_id, name, color, is_primary)
       VALUES ($1, $2, $3, $4)
@@ -54,6 +62,14 @@ class Calendar {
   }
 
   async update({ name, color, is_primary }) {
+    // If setting as primary, unset other primary calendars for this user
+    if (is_primary === true) {
+      await pool.query(
+        'UPDATE calendars SET is_primary = false, updated_at = NOW() WHERE user_id = $1 AND id != $2 AND is_primary = true',
+        [this.user_id, this.id]
+      );
+    }
+
     const query = `
       UPDATE calendars 
       SET name = COALESCE($1, name),

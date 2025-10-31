@@ -93,6 +93,8 @@ Backend environment is configured in `docker-compose.dev.yml`.
 
 ## 📱 Features
 
+For a comprehensive list of implemented features and suggested production-ready features, see [FEATURES.md](./FEATURES.md).
+
 ### ✅ Implemented
 - [x] Weekly & Monthly View Toggle
 - [x] Drag & Drop Events

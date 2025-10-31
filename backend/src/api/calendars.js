@@ -40,19 +40,13 @@ router.get('/:id', authenticateToken, async (req, res) => {
 // Create new calendar
 router.post('/', authenticateToken, validateRequest(calendarCreateSchema), async (req, res) => {
   try {
-    const { name, color, is_primary } = req.body;
-    
-    // If this is being set as primary, unset other primary calendars
-    if (is_primary) {
-      // This would require additional logic to unset other primary calendars
-      // For now, we'll just create the calendar
-    }
+    const { name, color, is_primary = false } = req.body;
 
     const calendar = await Calendar.create({
       user_id: req.user.id,
-      name,
-      color,
-      is_primary
+      name: name.trim(),
+      color: color || '#3B82F6',
+      is_primary: Boolean(is_primary)
     });
 
     res.status(201).json({
@@ -61,7 +55,9 @@ router.post('/', authenticateToken, validateRequest(calendarCreateSchema), async
     });
   } catch (error) {
     console.error('Create calendar error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ 
+      error: error.message || 'Failed to create calendar. Please try again.' 
+    });
   }
 });
 

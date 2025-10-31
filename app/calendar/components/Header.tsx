@@ -1,6 +1,9 @@
 "use client";
 
-import { Plus, Search, Calendar as CalendarIcon, Menu } from "lucide-react";
+import { Plus, Search, Calendar as CalendarIcon, Menu, User } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useAuthStore } from "@/stores/authStore";
+import Link from "next/link";
 import { ViewType } from "./CalendarApp";
 
 interface HeaderProps {
@@ -9,9 +12,22 @@ interface HeaderProps {
   currentDate: Date;
   sidebarOpen: boolean;
   setSidebarOpen: (open: boolean) => void;
+  onCreateEvent: () => void;
 }
 
-export default function Header({ view, setView, currentDate, sidebarOpen, setSidebarOpen }: HeaderProps) {
+export default function Header({ view, setView, currentDate, sidebarOpen, setSidebarOpen, onCreateEvent }: HeaderProps) {
+  const { user } = useAuthStore();
+  const router = useRouter();
+
+  const userInitials = user?.name
+    ? user.name
+        .split(' ')
+        .map(n => n[0])
+        .join('')
+        .toUpperCase()
+        .slice(0, 2)
+    : 'U';
+
   return (
   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 sm:p-4 border-b border-gray-200 gap-3 sm:gap-0">
       {/* left: logo + search */}
@@ -61,23 +77,26 @@ export default function Header({ view, setView, currentDate, sidebarOpen, setSid
         </div>
       </div>
 
-      {/* right: create + avatars */}
+      {/* right: create + user */}
       <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto justify-between sm:justify-end">
-        <button className="flex items-center gap-2 bg-blue-600 text-white px-3 sm:px-4 py-2 rounded-md shadow hover:bg-blue-700 text-sm">
+        <button 
+          onClick={onCreateEvent}
+          className="flex items-center gap-2 bg-blue-600 text-white px-3 sm:px-4 py-2 rounded-md shadow hover:bg-blue-700 text-sm transition"
+        >
           <Plus className="w-4 h-4" />
           <span className="hidden sm:inline">CREATE</span>
         </button>
-        <div className="flex -space-x-2 items-center">
-          {["JF", "HT"].map((initial, i) => (
-            <div
-              key={i}
-              className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-gray-600 text-white flex items-center justify-center text-xs font-medium border-2 border-white"
-            >
-              {initial}
+        <Link
+          href="/profile"
+          className="flex items-center gap-2 hover:bg-gray-100 rounded-lg px-2 py-1 transition"
+        >
+          <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-medium border-2 border-white">
+            {userInitials}
             </div>
-          ))}
-        </div>
-        <span className="text-xs sm:text-sm font-medium hidden sm:inline">Rach Smith</span>
+          <span className="text-xs sm:text-sm font-medium hidden sm:inline">
+            {user?.name || 'User'}
+          </span>
+        </Link>
       </div>
     </div>
   );

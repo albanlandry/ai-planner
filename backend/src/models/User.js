@@ -7,18 +7,19 @@ class User {
     this.email = data.email;
     this.name = data.name;
     this.avatar_url = data.avatar_url;
+    this.role = data.role || 'user';
     this.created_at = data.created_at;
     this.updated_at = data.updated_at;
   }
 
-  static async create({ email, name, password }) {
+  static async create({ email, name, password, role = 'user' }) {
     const hashedPassword = await bcrypt.hash(password, 10);
     const query = `
-      INSERT INTO users (email, name, password_hash)
-      VALUES ($1, $2, $3)
-      RETURNING id, email, name, avatar_url, created_at, updated_at
+      INSERT INTO users (email, name, password_hash, role)
+      VALUES ($1, $2, $3, $4)
+      RETURNING id, email, name, avatar_url, role, created_at, updated_at
     `;
-    const values = [email, name, hashedPassword];
+    const values = [email, name, hashedPassword, role];
     
     const result = await pool.query(query, values);
     return new User(result.rows[0]);
@@ -26,7 +27,7 @@ class User {
 
   static async findByEmail(email) {
     const query = `
-      SELECT id, email, name, password_hash, avatar_url, created_at, updated_at
+      SELECT id, email, name, password_hash, avatar_url, role, created_at, updated_at
       FROM users WHERE email = $1
     `;
     const result = await pool.query(query, [email]);
@@ -35,7 +36,7 @@ class User {
 
   static async findById(id) {
     const query = `
-      SELECT id, email, name, avatar_url, created_at, updated_at
+      SELECT id, email, name, avatar_url, role, created_at, updated_at
       FROM users WHERE id = $1
     `;
     const result = await pool.query(query, [id]);
@@ -68,6 +69,7 @@ class User {
       email: this.email,
       name: this.name,
       avatar_url: this.avatar_url,
+      role: this.role,
       created_at: this.created_at,
       updated_at: this.updated_at
     };

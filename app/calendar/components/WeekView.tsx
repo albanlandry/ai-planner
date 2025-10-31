@@ -9,16 +9,21 @@ import {
   addMinutes,
   setHours,
   setMinutes,
+  isSameDay,
 } from "date-fns";
 import EventBlock from "./EventBlock";
+import { Event, UpdateEventData } from "@/lib/api";
 import { useCalendarStore } from "@/stores/calendarStore";
 
 interface WeekViewProps {
   currentDate: Date;
+  events: Event[];
+  onEventClick: (event: Event) => void;
+  onEventDelete: (eventId: string) => void;
 }
 
-export default function WeekView({ currentDate }: WeekViewProps) {
-  const { events, updateEvent } = useCalendarStore();
+export default function WeekView({ currentDate, events, onEventClick, onEventDelete }: WeekViewProps) {
+  const { updateEvent } = useCalendarStore();
   const [draggedEvent, setDraggedEvent] = useState<any>(null);
   const [dragOverCell, setDragOverCell] = useState<Date | null>(null);
 
@@ -53,18 +58,17 @@ export default function WeekView({ currentDate }: WeekViewProps) {
       const minutes = totalMinutes % 60;
       const newStart = setMinutes(setHours(targetDay, hours), minutes);
 
-      const duration =
-        parseInt(draggedEvent.endTime.split(":")[0]) * 60 +
-        parseInt(draggedEvent.endTime.split(":")[1]) -
-        parseInt(draggedEvent.startTime.split(":")[0]) * 60 -
-        parseInt(draggedEvent.startTime.split(":")[1]);
+      const eventStart = new Date(draggedEvent.start_time);
+      const eventEnd = new Date(draggedEvent.end_time);
+      const duration = (eventEnd.getTime() - eventStart.getTime()) / (1000 * 60);
       const newEnd = addMinutes(newStart, duration);
 
-      updateEvent(draggedEvent.id, {
-        day: targetDay.getDate(),
-        startTime: format(newStart, "HH:mm"),
-        endTime: format(newEnd, "HH:mm"),
-      });
+      const updates: UpdateEventData = {
+        start_time: newStart.toISOString(),
+        end_time: newEnd.toISOString(),
+      };
+
+      updateEvent(draggedEvent.id, updates);
     },
     [draggedEvent, updateEvent]
   );
@@ -88,8 +92,15 @@ export default function WeekView({ currentDate }: WeekViewProps) {
 
       {weekDays.map((day, idx) => {
         const dayEvents = events
-          .filter((e) => e.day === day.getDate())
-          .sort((a, b) => a.startTime.localeCompare(b.startTime));
+          .filter((e) => {
+            const eventStart = new Date(e.start_time);
+            return isSameDay(eventStart, day);
+          })
+          .sort((a, b) => {
+            const aStart = new Date(a.start_time);
+            const bStart = new Date(b.start_time);
+            return aStart.getTime() - bStart.getTime();
+          });
 
         return (
           <div
@@ -116,18 +127,20 @@ export default function WeekView({ currentDate }: WeekViewProps) {
             </div>
             <div className="relative h-full min-h-[1280px]">
               {dayEvents.map((event) => {
-                const [sh, sm] = event.startTime.split(":").map(Number);
+                const eventStart = new Date(event.start_time);
+                const eventEnd = new Date(event.end_time);
+                const sh = eventStart.getHours();
+                const sm = eventStart.getMinutes();
                 const top = (sh - 8) * 80 + (sm / 60) * 80;
-                const duration =
-                  (parseInt(event.endTime.split(":")[0]) - sh) * 60 +
-                  (parseInt(event.endTime.split(":")[1]) - sm);
+                const duration = (eventEnd.getTime() - eventStart.getTime()) / (1000 * 60);
                 const height = Math.max(40, (duration / 60) * 80);
 
                 return (
                   <div
                     key={event.id}
-                    className="absolute left-1 right-1"
+                    className="absolute left-1 right-1 cursor-pointer"
                     style={{ top: `${top}px`, height: `${height}px` }}
+                    onClick={() => onEventClick(event)}
                   >
                     <EventBlock
                       event={event}
@@ -135,6 +148,7 @@ export default function WeekView({ currentDate }: WeekViewProps) {
                       onUpdate={updateEvent}
                       onDragStart={handleDragStart}
                       onDragEnd={handleDragEnd}
+                      onClick={() => onEventClick(event)}
                     />
                   </div>
                 );

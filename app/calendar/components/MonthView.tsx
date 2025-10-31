@@ -1,26 +1,45 @@
 "use client";
 
-import { startOfMonth, endOfMonth, eachDayOfInterval, format } from "date-fns";
+import { startOfMonth, endOfMonth, eachDayOfInterval, format, isSameDay } from "date-fns";
 import EventBlock from "./EventBlock";
+import { Event, UpdateEventData } from "@/lib/api";
 import { useCalendarStore } from "@/stores/calendarStore";
 
 interface MonthViewProps {
   currentDate: Date;
+  events: Event[];
+  onEventClick: (event: Event) => void;
+  onEventDelete: (eventId: string) => void;
 }
 
-export default function MonthView({ currentDate }: MonthViewProps) {
-  const { events, updateEvent } = useCalendarStore();
+export default function MonthView({ currentDate, events, onEventClick, onEventDelete }: MonthViewProps) {
+  const { updateEvent } = useCalendarStore();
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);
   const monthDays = eachDayOfInterval({ start: monthStart, end: monthEnd });
 
   const handleDrop = (e: React.DragEvent, targetDay: Date) => {
     e.preventDefault();
-    const draggedEvent = JSON.parse(e.dataTransfer.getData("event"));
-    updateEvent(draggedEvent.id, {
-      day: targetDay.getDate(),
-      startTime: "10:00",
-    });
+    try {
+      const draggedEvent: Event = JSON.parse(e.dataTransfer.getData("event"));
+      const eventStart = new Date(draggedEvent.start_time);
+      const eventEnd = new Date(draggedEvent.end_time);
+      const duration = eventEnd.getTime() - eventStart.getTime();
+      
+      // Set the new start time to the target day at the same time
+      const newStart = new Date(targetDay);
+      newStart.setHours(eventStart.getHours(), eventStart.getMinutes());
+      const newEnd = new Date(newStart.getTime() + duration);
+
+      const updates: UpdateEventData = {
+        start_time: newStart.toISOString(),
+        end_time: newEnd.toISOString(),
+      };
+
+      updateEvent(draggedEvent.id, updates);
+    } catch (err) {
+      console.error('Failed to handle drop:', err);
+    }
   };
 
   return (
@@ -38,8 +57,16 @@ export default function MonthView({ currentDate }: MonthViewProps) {
       ))}
       {monthDays.map((day) => {
         const dayEvents = events
-          .filter((e) => e.day === day.getDate())
+          .filter((e) => {
+            const eventStart = new Date(e.start_time);
+            return isSameDay(eventStart, day);
+          })
           .slice(0, 3);
+        const totalEvents = events.filter((e) => {
+          const eventStart = new Date(e.start_time);
+          return isSameDay(eventStart, day);
+        }).length;
+
         return (
           <div
             key={day.toISOString()}
@@ -50,19 +77,26 @@ export default function MonthView({ currentDate }: MonthViewProps) {
             <div className="text-sm font-medium mb-1">{format(day, "d")}</div>
             <div className="space-y-1">
               {dayEvents.map((event) => (
-                <EventBlock
+                <div
                   key={event.id}
-                  event={event}
-                  day={day}
-                  onUpdate={updateEvent}
-                  onDragStart={() => {}}
-                  onDragEnd={() => {}}
-                />
+                  onClick={() => onEventClick(event)}
+                  className="cursor-pointer"
+                >
+                  <EventBlock
+                    event={event}
+                    day={day}
+                    onUpdate={updateEvent}
+                    onDragStart={(e) => {
+                      e.dataTransfer.setData("event", JSON.stringify(event));
+                    }}
+                    onDragEnd={() => {}}
+                    onClick={() => onEventClick(event)}
+                  />
+                </div>
               ))}
-              {events.filter((e) => e.day === day.getDate()).length > 3 && (
+              {totalEvents > 3 && (
                 <div className="text-xs text-gray-500">
-                  +{events.filter((e) => e.day === day.getDate()).length - 3}{" "}
-                  more
+                  +{totalEvents - 3} more
                 </div>
               )}
             </div>

@@ -83,7 +83,9 @@ export const useCalendarStore = create<CalendarState>((set, get) => ({
     // Update event
     updateEvent: async (id: string, updates: UpdateEventData) => {
         const originalEvent = get().events.find(e => e.id === id);
-        if (!originalEvent) return;
+        if (!originalEvent) {
+            throw new Error('Event not found');
+        }
 
         // Optimistic update
         get().optimisticUpdateEvent(id, updates as Partial<Event>);
@@ -94,10 +96,13 @@ export const useCalendarStore = create<CalendarState>((set, get) => ({
                 events: state.events.map(e => e.id === id ? response.event : e),
                 loading: false
             }));
+            return response.event;
         } catch (error: any) {
             // Rollback on error
             get().rollbackEventUpdate(id, originalEvent);
-            set({ error: error.message, loading: false });
+            const errorMessage = error instanceof Error ? error.message : 'Failed to update event';
+            set({ error: errorMessage, loading: false });
+            throw error; // Re-throw so caller can handle it
         }
     },
 
@@ -111,7 +116,9 @@ export const useCalendarStore = create<CalendarState>((set, get) => ({
                 loading: false
             }));
         } catch (error: any) {
-            set({ error: error.message, loading: false });
+            const errorMessage = error instanceof Error ? error.message : 'Failed to delete event';
+            set({ error: errorMessage, loading: false });
+            throw error; // Re-throw so caller can handle it
         }
     },
 
@@ -134,12 +141,19 @@ export const useCalendarStore = create<CalendarState>((set, get) => ({
         set({ loading: true, error: null });
         try {
             const response = await apiService.createCalendar(calendarData);
-            set((state) => ({
-                calendars: [...state.calendars, response.calendar],
+            
+            // Refresh calendars to get updated primary calendar status
+            const calendarsResponse = await apiService.getCalendars();
+            set({
+                calendars: calendarsResponse.calendars,
                 loading: false
-            }));
+            });
+            
+            return response.calendar;
         } catch (error: any) {
-            set({ error: error.message, loading: false });
+            const errorMessage = error instanceof Error ? error.message : 'Failed to create calendar';
+            set({ error: errorMessage, loading: false });
+            throw error;
         }
     },
 
@@ -148,12 +162,19 @@ export const useCalendarStore = create<CalendarState>((set, get) => ({
         set({ loading: true, error: null });
         try {
             const response = await apiService.updateCalendar(id, updates);
-            set((state) => ({
-                calendars: state.calendars.map(c => c.id === id ? response.calendar : c),
+            
+            // Refresh calendars to get updated primary calendar status
+            const calendarsResponse = await apiService.getCalendars();
+            set({
+                calendars: calendarsResponse.calendars,
                 loading: false
-            }));
+            });
+            
+            return response.calendar;
         } catch (error: any) {
-            set({ error: error.message, loading: false });
+            const errorMessage = error instanceof Error ? error.message : 'Failed to update calendar';
+            set({ error: errorMessage, loading: false });
+            throw error;
         }
     },
 
@@ -162,13 +183,16 @@ export const useCalendarStore = create<CalendarState>((set, get) => ({
         set({ loading: true, error: null });
         try {
             await apiService.deleteCalendar(id);
+            // Remove calendar and associated events from state
             set((state) => ({
                 calendars: state.calendars.filter(c => c.id !== id),
                 events: state.events.filter(e => e.calendar_id !== id),
                 loading: false
             }));
         } catch (error: any) {
-            set({ error: error.message, loading: false });
+            const errorMessage = error instanceof Error ? error.message : 'Failed to delete calendar';
+            set({ error: errorMessage, loading: false });
+            throw error;
         }
     },
 

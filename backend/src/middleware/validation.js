@@ -68,22 +68,23 @@ const eventCreateSchema = Joi.object({
 });
 
 const eventUpdateSchema = Joi.object({
-  title: Joi.string().min(1).max(255),
-  description: Joi.string().max(1000).allow(''),
-  start_time: Joi.date().iso(),
-  end_time: Joi.date().iso(),
-  is_all_day: Joi.boolean(),
-  location: Joi.string().max(255).allow(''),
+  calendar_id: Joi.string().uuid().optional(),
+  title: Joi.string().min(1).max(255).optional(),
+  description: Joi.string().max(1000).allow('').optional(),
+  start_time: Joi.date().iso().optional(),
+  end_time: Joi.date().iso().optional(),
+  is_all_day: Joi.boolean().optional(),
+  location: Joi.string().max(255).allow('').optional(),
   attendees: Joi.array().items(Joi.object({
     email: Joi.string().email(),
     name: Joi.string().min(1).max(255)
-  })),
+  })).optional(),
   recurrence_rule: Joi.object({
     frequency: Joi.string().valid('daily', 'weekly', 'monthly', 'yearly'),
     interval: Joi.number().integer().min(1),
     end_date: Joi.date().iso(),
     count: Joi.number().integer().min(1)
-  })
+  }).optional()
 });
 
 module.exports = {
@@ -94,5 +95,22 @@ module.exports = {
   calendarCreateSchema,
   calendarUpdateSchema,
   eventCreateSchema,
-  eventUpdateSchema
+  eventUpdateSchema,
+  // Added below
+  organizationCreateSchema: require('joi').object({
+    name: require('joi').string().min(2).max(255).required(),
+    description: require('joi').string().max(1000).allow('')
+  }),
+  organizationUpdateSchema: require('joi').object({
+    name: require('joi').string().min(2).max(255),
+    description: require('joi').string().max(1000).allow('')
+  }),
+  teamCreateSchema: require('joi').object({
+    name: require('joi').string().min(2).max(255).required(),
+    description: require('joi').string().max(1000).allow('')
+  }),
+  invitationCreateSchema: require('joi').object({
+    email: require('joi').string().email().required(),
+    expires_in_hours: require('joi').number().integer().min(1).max(720).default(72)
+  })
 };

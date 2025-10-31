@@ -111,6 +111,7 @@ class Event {
   }
 
   async update({
+    calendar_id,
     title,
     description,
     start_time,
@@ -122,19 +123,21 @@ class Event {
   }) {
     const query = `
       UPDATE events 
-      SET title = COALESCE($1, title),
-          description = COALESCE($2, description),
-          start_time = COALESCE($3, start_time),
-          end_time = COALESCE($4, end_time),
-          is_all_day = COALESCE($5, is_all_day),
-          location = COALESCE($6, location),
-          attendees = COALESCE($7, attendees),
-          recurrence_rule = COALESCE($8, recurrence_rule),
+      SET calendar_id = COALESCE($1, calendar_id),
+          title = COALESCE($2, title),
+          description = COALESCE($3, description),
+          start_time = COALESCE($4, start_time),
+          end_time = COALESCE($5, end_time),
+          is_all_day = COALESCE($6, is_all_day),
+          location = COALESCE($7, location),
+          attendees = COALESCE($8, attendees),
+          recurrence_rule = COALESCE($9, recurrence_rule),
           updated_at = NOW()
-      WHERE id = $9
+      WHERE id = $10
       RETURNING id, calendar_id, title, description, start_time, end_time, is_all_day, location, attendees, recurrence_rule, created_at, updated_at
     `;
     const values = [
+      calendar_id,
       title,
       description,
       start_time,

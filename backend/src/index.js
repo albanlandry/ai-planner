@@ -10,11 +10,59 @@ const { runMigration } = require('./config/database');
 const authRoutes = require('./api/auth');
 const calendarRoutes = require('./api/calendars');
 const eventRoutes = require('./api/events');
+const organizationRoutes = require('./api/organizations');
 
 const app = express();
 const PORT = process.env.PORT || 8000;
 
-// Security middleware
+// CORS configuration (must come before other middleware)
+const corsOptions = {
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests or same-origin requests)
+    if (!origin) return callback(null, true);
+    
+    // Get allowed origins from environment variable (comma-separated)
+    const allowedOrigins = process.env.CORS_ORIGIN 
+      ? process.env.CORS_ORIGIN.split(',').map(o => o.trim())
+      : [
+          'http://localhost:3000',
+          'http://localhost:3001',
+          'http://127.0.0.1:3000',
+          'http://127.0.0.1:3001'
+        ];
+    
+    // In development, be more permissive
+    if (process.env.NODE_ENV === 'development') {
+      // Check if origin matches any allowed origin or is a localhost variant
+      const isLocalhost = origin.includes('localhost') || origin.includes('127.0.0.1');
+      if (allowedOrigins.indexOf(origin) !== -1 || isLocalhost) {
+        return callback(null, true);
+      }
+    }
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      console.log(`CORS blocked origin: ${origin}`);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  exposedHeaders: ['Content-Type'],
+  maxAge: 86400, // 24 hours
+  preflightContinue: false,
+  optionsSuccessStatus: 204
+};
+
+// Enable CORS for all routes (before other middleware)
+app.use(cors(corsOptions));
+
+// Handle preflight requests explicitly
+app.options('*', cors(corsOptions));
+
+// Security middleware (after CORS)
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
@@ -24,14 +72,7 @@ app.use(helmet({
       imgSrc: ["'self'", "data:", "https:"],
     },
   },
-}));
-
-// CORS configuration
-app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  crossOriginResourcePolicy: { policy: "cross-origin" },
 }));
 
 // Rate limiting
@@ -73,6 +114,7 @@ app.get('/health', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/calendars', calendarRoutes);
 app.use('/api/events', eventRoutes);
+app.use('/api/organizations', organizationRoutes);
 
 // 404 handler
 app.use('*', (req, res) => {
