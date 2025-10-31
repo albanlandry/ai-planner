@@ -10,6 +10,7 @@ import MonthView from "./MonthView";
 import EventForm from "./EventForm";
 import CalendarForm from "./CalendarForm";
 import { useCalendarStore } from "@/stores/calendarStore";
+import { useTaskStore } from "@/stores/taskStore";
 import { Event, Calendar, CreateEventData, UpdateEventData, CreateCalendarData, UpdateCalendarData } from "@/lib/api";
 
 export type ViewType = "week" | "month";
@@ -52,14 +53,24 @@ export default function CalendarApp() {
     deleteCalendar
   } = useCalendarStore();
 
+  const { tasks, fetchTasks } = useTaskStore();
+
   // Note: fetchCurrentUser is already called by ProtectedRoute wrapper
   // No need to call it again here
 
-  // Fetch calendars on mount
+  // Fetch calendars and tasks on mount
   useEffect(() => {
     fetchCalendars();
+    fetchTasks().catch(() => {
+      // Ignore errors - tasks may not be loaded yet
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Calculate pending task count for navigation badge
+  const pendingTaskCount = tasks.filter(t => 
+    t.status === 'todo' || t.status === 'in_progress'
+  ).length;
 
   // Persist selected view to localStorage
   useEffect(() => {
@@ -207,6 +218,7 @@ export default function CalendarApp() {
       <MainNavigation 
         collapsed={navCollapsed}
         onToggleCollapse={() => setNavCollapsed(!navCollapsed)}
+        pendingTaskCount={pendingTaskCount}
       />
 
       {/* Main Content Area */}

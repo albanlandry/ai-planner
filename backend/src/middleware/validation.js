@@ -112,5 +112,26 @@ module.exports = {
   invitationCreateSchema: require('joi').object({
     email: require('joi').string().email().required(),
     expires_in_hours: require('joi').number().integer().min(1).max(720).default(72)
+  }),
+  // Task validation schemas
+  taskCreateSchema: Joi.object({
+    title: Joi.string().min(1).max(255).required(),
+    description: Joi.string().max(2000).allow(''),
+    status: Joi.string().valid('todo', 'in_progress', 'done', 'cancelled').default('todo'),
+    priority: Joi.string().valid('low', 'medium', 'high', 'urgent').default('medium'),
+    due_date: Joi.date().iso().allow(null),
+    calendar_id: Joi.string().uuid().allow(null),
+    organization_id: Joi.string().uuid().allow(null),
+    team_id: Joi.string().uuid().allow(null)
+  }),
+  taskUpdateSchema: Joi.object({
+    title: Joi.string().min(1).max(255),
+    description: Joi.string().max(2000).allow(''),
+    status: Joi.string().valid('todo', 'in_progress', 'done', 'cancelled'),
+    priority: Joi.string().valid('low', 'medium', 'high', 'urgent'),
+    due_date: Joi.date().iso().allow(null),
+    calendar_id: Joi.string().uuid().allow(null),
+    organization_id: Joi.string().uuid().allow(null),
+    team_id: Joi.string().uuid().allow(null)
   })
 };

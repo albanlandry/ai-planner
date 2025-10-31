@@ -11,6 +11,7 @@ const authRoutes = require('./api/auth');
 const calendarRoutes = require('./api/calendars');
 const eventRoutes = require('./api/events');
 const organizationRoutes = require('./api/organizations');
+const taskRoutes = require('./api/tasks');
 
 const app = express();
 const PORT = process.env.PORT || 8000;
@@ -115,6 +116,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/calendars', calendarRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api/organizations', organizationRoutes);
+app.use('/api/tasks', taskRoutes);
 
 // 404 handler
 app.use('*', (req, res) => {

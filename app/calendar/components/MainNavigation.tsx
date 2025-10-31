@@ -23,14 +23,15 @@ interface NavItem {
 interface MainNavigationProps {
   collapsed?: boolean;
   onToggleCollapse?: () => void;
+  pendingTaskCount?: number;
 }
 
-export default function MainNavigation({ collapsed = false, onToggleCollapse }: MainNavigationProps) {
+export default function MainNavigation({ collapsed = false, onToggleCollapse, pendingTaskCount = 0 }: MainNavigationProps) {
   const pathname = usePathname();
 
   const navItems: NavItem[] = [
     { id: 'calendar', label: 'Calendar', icon: CalendarIcon, href: '/calendar' },
-    { id: 'tasks', label: 'Tasks', icon: CheckSquare, href: '/tasks', badge: 3 },
+    { id: 'tasks', label: 'Tasks', icon: CheckSquare, href: '/tasks', badge: pendingTaskCount > 0 ? pendingTaskCount : undefined },
     { id: 'teams', label: 'Teams', icon: Users, href: '/teams' },
     { id: 'notifications', label: 'Notifications', icon: Bell, href: '/notifications', badge: 5 },
     { id: 'notes', label: 'Notes', icon: FileText, href: '/notes' },
@@ -103,8 +104,8 @@ export default function MainNavigation({ collapsed = false, onToggleCollapse }: 
                 {showExpanded && (
                   <>
                     <span className="flex-1 text-sm font-medium">{item.label}</span>
-                    {item.badge !== undefined && (
-                      <span className="bg-blue-600 text-white text-xs font-semibold px-2 py-0.5 rounded-full">
+                    {item.badge !== undefined && item.badge > 0 && (
+                      <span className="bg-blue-600 text-white text-xs font-semibold px-2 py-0.5 rounded-full min-w-[20px] text-center">
                         {item.badge}
                       </span>
                     )}

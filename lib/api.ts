@@ -263,6 +263,34 @@ class ApiService {
       method: 'POST',
     });
   }
+
+  // Task endpoints
+  async getTasks(params?: { status?: string; priority?: string; calendar_id?: string }) {
+    const searchParams = params ? new URLSearchParams(params).toString() : '';
+    return this.request<{ tasks: Task[] }>(`/tasks${searchParams ? `?${searchParams}` : ''}`);
+  }
+
+  async getTask(id: string) {
+    return this.request<{ task: Task }>(`/tasks/${id}`);
+  }
+
+  async createTask(data: CreateTaskData) {
+    return this.request<{ task: Task }>('/tasks', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateTask(id: string, data: UpdateTaskData) {
+    return this.request<{ task: Task }>(`/tasks/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteTask(id: string) {
+    return this.request(`/tasks/${id}`, { method: 'DELETE' });
+  }
 }
 
 // Types
@@ -348,6 +376,44 @@ export interface UpdateEventData {
   attendees?: Attendee[];
   recurrence_rule?: RecurrenceRule;
   calendar_id?: string;
+}
+
+export interface Task {
+  id: string;
+  user_id: string;
+  title: string;
+  description?: string;
+  status: 'todo' | 'in_progress' | 'done' | 'cancelled';
+  priority: 'low' | 'medium' | 'high' | 'urgent';
+  due_date?: string;
+  completed_at?: string;
+  calendar_id?: string;
+  organization_id?: string;
+  team_id?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateTaskData {
+  title: string;
+  description?: string;
+  status?: 'todo' | 'in_progress' | 'done' | 'cancelled';
+  priority?: 'low' | 'medium' | 'high' | 'urgent';
+  due_date?: string;
+  calendar_id?: string;
+  organization_id?: string;
+  team_id?: string;
+}
+
+export interface UpdateTaskData {
+  title?: string;
+  description?: string;
+  status?: 'todo' | 'in_progress' | 'done' | 'cancelled';
+  priority?: 'low' | 'medium' | 'high' | 'urgent';
+  due_date?: string;
+  calendar_id?: string;
+  organization_id?: string;
+  team_id?: string;
 }
 
 // Create singleton instance
