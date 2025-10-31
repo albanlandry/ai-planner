@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { startOfWeek, endOfWeek, startOfMonth, endOfMonth } from "date-fns";
 import Header from "./Header";
+import MainNavigation from "./MainNavigation";
 import Sidebar from "./Sidebar";
 import WeekView from "./WeekView";
 import MonthView from "./MonthView";
@@ -24,7 +25,14 @@ export default function CalendarApp() {
     return "week";
   });
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [calendarSidebarOpen, setCalendarSidebarOpen] = useState(false);
+  const [navCollapsed, setNavCollapsed] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('navCollapsed');
+      return stored === 'true';
+    }
+    return false;
+  });
   const [showEventForm, setShowEventForm] = useState(false);
   const [showCalendarForm, setShowCalendarForm] = useState(false);
   const [editingEvent, setEditingEvent] = useState<Event | undefined>();
@@ -59,6 +67,13 @@ export default function CalendarApp() {
       localStorage.setItem('calendarView', view);
     }
   }, [view]);
+
+  // Persist navigation collapsed state
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('navCollapsed', navCollapsed.toString());
+    }
+  }, [navCollapsed]);
 
   // Fetch events when date changes or calendars are loaded
   useEffect(() => {
@@ -180,35 +195,36 @@ export default function CalendarApp() {
 
   if (loading && calendars.length === 0) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-pink-100 to-pink-200 flex items-center justify-center">
+      <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-100 to-pink-200">
-      <div className="w-full bg-white overflow-hidden">
+    <div className="min-h-screen bg-white flex">
+      {/* Left Main Navigation */}
+      <MainNavigation 
+        collapsed={navCollapsed}
+        onToggleCollapse={() => setNavCollapsed(!navCollapsed)}
+      />
+
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Top Header */}
         <Header
           view={view}
           setView={setView}
           currentDate={currentDate}
-          sidebarOpen={sidebarOpen}
-          setSidebarOpen={setSidebarOpen}
+          sidebarOpen={calendarSidebarOpen}
+          setSidebarOpen={setCalendarSidebarOpen}
           onCreateEvent={handleCreateEvent}
         />
-        <div className="flex flex-col lg:flex-row">
-          <div className={`${sidebarOpen ? 'block' : 'hidden'} lg:block`}>
-              <Sidebar 
-                currentDate={currentDate} 
-                setCurrentDate={setCurrentDate}
-                calendars={calendars}
-                onCreateCalendar={handleCreateCalendar}
-                onEditCalendar={handleEditCalendar}
-                onDeleteCalendar={handleDeleteCalendar}
-              />
-          </div>
-          <div className="flex-1 p-2 sm:p-4">
+
+        {/* Calendar Content with Right Sidebar */}
+        <div className="flex-1 flex overflow-hidden bg-white">
+          {/* Main Calendar View */}
+          <div className="flex-1 overflow-auto p-2 sm:p-4">
             {view === "week" ? (
               <WeekView 
                 currentDate={currentDate} 
@@ -224,6 +240,18 @@ export default function CalendarApp() {
                 onEventDelete={handleDeleteEvent}
               />
             )}
+          </div>
+
+          {/* Right Calendar Sidebar */}
+          <div className={`${calendarSidebarOpen ? 'block' : 'hidden'} lg:block border-l border-gray-200 overflow-y-auto`}>
+            <Sidebar 
+              currentDate={currentDate} 
+              setCurrentDate={setCurrentDate}
+              calendars={calendars}
+              onCreateCalendar={handleCreateCalendar}
+              onEditCalendar={handleEditCalendar}
+              onDeleteCalendar={handleDeleteCalendar}
+            />
           </div>
         </div>
       </div>
