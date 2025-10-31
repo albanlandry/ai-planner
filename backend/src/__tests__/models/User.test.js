@@ -218,7 +218,8 @@ describe('User Model', () => {
         name: 'Test User',
         avatar_url: 'https://example.com/avatar.jpg',
         created_at: '2024-01-01T00:00:00Z',
-        updated_at: '2024-01-01T00:00:00Z'
+        updated_at: '2024-01-01T00:00:00Z',
+        role: 'user'
       });
 
       const json = user.toJSON();
@@ -229,7 +230,8 @@ describe('User Model', () => {
         name: 'Test User',
         avatar_url: 'https://example.com/avatar.jpg',
         created_at: '2024-01-01T00:00:00Z',
-        updated_at: '2024-01-01T00:00:00Z'
+        updated_at: '2024-01-01T00:00:00Z',
+        role: 'user'
       });
     });
   });

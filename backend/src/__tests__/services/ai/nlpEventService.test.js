@@ -97,8 +97,8 @@ describe('NLP Event Service', () => {
         { calendars: [] }
       );
 
-      expect(result.start_time).toBe('2025-02-01T14:00:00Z');
-      expect(result.end_time).toBe('2025-02-01T15:00:00Z');
+      expect(new Date(result.start_time).toISOString()).toBe('2025-02-01T14:00:00.000Z');
+      expect(new Date(result.end_time).toISOString()).toBe('2025-02-01T15:00:00.000Z');
     });
   });
 
@@ -117,7 +117,7 @@ describe('NLP Event Service', () => {
     it('should default to 1 hour duration if end_time not provided', () => {
       const result = nlpEventService.parseEventDates('2025-02-01T14:00:00Z', null);
 
-      expect(result.start_time).toBe('2025-02-01T14:00:00Z');
+      expect(new Date(result.start_time).toISOString()).toBe('2025-02-01T14:00:00.000Z');
       expect(result.end_time).toBeDefined();
       const duration = new Date(result.end_time).getTime() - new Date(result.start_time).getTime();
       expect(duration).toBe(60 * 60 * 1000); // 1 hour

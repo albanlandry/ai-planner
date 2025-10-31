@@ -9,7 +9,7 @@ const chrono = require('chrono-node');
 
 const PRIORITY_KEYWORDS = {
   urgent: ['urgent', 'asap', 'immediately', 'critical', 'emergency', 'now'],
-  high: ['important', 'high', 'priority', 'soon', 'quickly'],
+  high: ['important', 'high', 'soon', 'quickly'],
   medium: ['normal', 'medium', 'moderate'],
   low: ['low', 'later', 'whenever', 'optional', 'nice to have'],
 };

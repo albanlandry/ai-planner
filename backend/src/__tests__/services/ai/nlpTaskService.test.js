@@ -39,7 +39,7 @@ describe('NLP Task Service', () => {
     });
 
     it('should infer low priority', () => {
-      expect(nlpTaskService.inferPriority('Low priority task')).toBe('low');
+      expect(nlpTaskService.inferPriority('This is a low priority task')).toBe('low');
       expect(nlpTaskService.inferPriority('Do this later')).toBe('low');
     });
 
@@ -150,7 +150,7 @@ describe('NLP Task Service', () => {
         { calendars: [] }
       );
 
-      expect(result.due_date).toBe('2025-02-07T00:00:00Z');
+      expect(new Date(result.due_date).toISOString()).toBe('2025-02-07T00:00:00.000Z');
     });
   });
 

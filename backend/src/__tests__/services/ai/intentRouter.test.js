@@ -126,27 +126,21 @@ describe('Intent Router', () => {
       expect(result.intent).toBe('general_chat');
     });
 
-    it('should handle keyword-based classification for CREATE_TASK', () => {
+    it('should handle keyword-based classification for CREATE_TASK', async () => {
       openaiService.isEnabled.mockReturnValue(false);
-
-      const result = intentRouter.classifyIntent('Create a new task for tomorrow');
-
+      const result = await intentRouter.classifyIntent('Create a new task for tomorrow');
       expect(result.intent).toBe('create_task');
     });
 
-    it('should handle keyword-based classification for QUERY_TASK', () => {
+    it('should handle keyword-based classification for QUERY_TASK', async () => {
       openaiService.isEnabled.mockReturnValue(false);
-
-      const result = intentRouter.classifyIntent('Show me all my tasks');
-
+      const result = await intentRouter.classifyIntent('Show me all my tasks');
       expect(result.intent).toBe('query_task');
     });
 
-    it('should handle keyword-based classification for general chat', () => {
+    it('should handle keyword-based classification for general chat', async () => {
       openaiService.isEnabled.mockReturnValue(false);
-
-      const result = intentRouter.classifyIntent('Hello, how can you help me?');
-
+      const result = await intentRouter.classifyIntent('Hello, how can you help me?');
       expect(result.intent).toBe('general_chat');
     });
   });

@@ -135,11 +135,16 @@ describe('Scheduling Service', () => {
   describe('findAvailableSlots', () => {
     it('should find available slots when no events exist', async () => {
       Event.findByUserId.mockResolvedValue([]);
-
+      const futureDay = new Date();
+      futureDay.setDate(futureDay.getDate() + 7);
+      futureDay.setHours(0,0,0,0);
+      const startISO = new Date(futureDay).toISOString();
+      const endOfDay = new Date(futureDay); endOfDay.setHours(23,59,59,999);
+      const endISO = endOfDay.toISOString();
       const result = await schedulingService.findAvailableSlots(
         'user-123',
-        '2025-02-01T00:00:00Z',
-        '2025-02-01T23:59:59Z',
+        startISO,
+        endISO,
         60,
         [9, 10, 11]
       );
@@ -161,11 +166,12 @@ describe('Scheduling Service', () => {
       ];
 
       Event.findByUserId.mockResolvedValue(existingEvents);
-
+      const day = new Date('2025-02-01T00:00:00Z');
+      const endDay = new Date('2025-02-01T23:59:59Z');
       const result = await schedulingService.findAvailableSlots(
         'user-123',
-        '2025-02-01T00:00:00Z',
-        '2025-02-01T23:59:59Z',
+        day.toISOString(),
+        endDay.toISOString(),
         60,
         [9, 10, 11]
       );
@@ -181,11 +187,13 @@ describe('Scheduling Service', () => {
 
     it('should respect preferred hours', async () => {
       Event.findByUserId.mockResolvedValue([]);
-
+      const futureDay = new Date(); futureDay.setDate(futureDay.getDate()+7); futureDay.setHours(0,0,0,0);
+      const startISO = futureDay.toISOString();
+      const endISO = new Date(futureDay.setHours(23,59,59,999)).toISOString();
       const result = await schedulingService.findAvailableSlots(
         'user-123',
-        '2025-02-01T00:00:00Z',
-        '2025-02-01T23:59:59Z',
+        startISO,
+        endISO,
         60,
         [14, 15, 16] // Afternoon hours only
       );
@@ -198,11 +206,12 @@ describe('Scheduling Service', () => {
 
     it('should limit results to 10 slots', async () => {
       Event.findByUserId.mockResolvedValue([]);
-
+      const start = new Date(); start.setDate(start.getDate()+1); start.setHours(0,0,0,0);
+      const end = new Date(start); end.setDate(end.getDate()+6); end.setHours(23,59,59,999);
       const result = await schedulingService.findAvailableSlots(
         'user-123',
-        '2025-02-01T00:00:00Z',
-        '2025-02-07T23:59:59Z', // 7 days
+        start.toISOString(),
+        end.toISOString(), // 7 days
         60,
         [9, 10, 11, 14, 15, 16, 17] // Many preferred hours
       );
