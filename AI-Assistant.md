@@ -2,6 +2,8 @@
 
 This document outlines proposed features for the AI Assistant system in the AI Planner application. For each feature, we check whether the required dependencies are already implemented in the codebase.
 
+**Implementation Decision:** We will use **OpenAI API** for implementing the AI assistant features. This provides advanced natural language understanding, intent recognition, content generation, and conversational capabilities.
+
 ---
 
 ## 📋 Feature Categories
@@ -27,9 +29,10 @@ This document outlines proposed features for the AI Assistant system in the AI P
 - ✅ **Event API Endpoints** - Implemented (`backend/src/api/events.js`)
 - ✅ **User Authentication** - Implemented (JWT)
 - ✅ **Calendar Model** - Implemented (`backend/src/models/Calendar.js`)
-- ❌ **NLP Processing** - Not implemented (requires NLP library like `@nlpjs/core`, OpenAI API, or similar)
-- ❌ **Date/Time Parsing** - Not implemented (requires libraries like `chrono-node` or `date-fns` parsing)
-- ❌ **Intent Recognition** - Not implemented (requires ML/NLP model)
+- ❌ **OpenAI API Integration** - Not implemented (requires `openai` npm package and API key configuration)
+- ❌ **NLP Processing Service** - Not implemented (will use OpenAI GPT models)
+- ❌ **Date/Time Parsing** - Not implemented (can use `chrono-node` for date parsing, enhanced with OpenAI)
+- ❌ **Intent Recognition** - Not implemented (will use OpenAI for intent classification)
 
 **Status:** ⚠️ Partially Ready - Core data models exist, but NLP processing layer needed
 
@@ -42,9 +45,10 @@ This document outlines proposed features for the AI Assistant system in the AI P
 - ✅ **Task Model** - Implemented (`backend/src/models/Task.js`)
 - ✅ **Task API Endpoints** - Implemented (`backend/src/api/tasks.js`)
 - ✅ **User Authentication** - Implemented
-- ❌ **NLP Processing** - Not implemented
-- ❌ **Priority Detection** - Not implemented (needs NLP to extract priority from text)
-- ❌ **Due Date Extraction** - Not implemented (needs date parsing)
+- ❌ **OpenAI API Integration** - Not implemented
+- ❌ **NLP Processing** - Not implemented (will use OpenAI for text understanding)
+- ❌ **Priority Detection** - Not implemented (will use OpenAI to extract priority from natural language)
+- ❌ **Due Date Extraction** - Not implemented (will use OpenAI + date parsing library)
 
 **Status:** ⚠️ Partially Ready - Core task models exist, NLP layer needed
 
@@ -58,9 +62,10 @@ This document outlines proposed features for the AI Assistant system in the AI P
 - ✅ **Task Model & API** - Implemented
 - ✅ **Date Range Queries** - Implemented (events API supports date filtering)
 - ✅ **Filtering Support** - Partially implemented (tasks support status/priority filters)
-- ❌ **Natural Language Understanding** - Not implemented
-- ❌ **Query Intent Classification** - Not implemented
-- ❌ **Response Generation** - Not implemented
+- ❌ **OpenAI API Integration** - Not implemented
+- ❌ **Natural Language Understanding** - Not implemented (will use OpenAI GPT models)
+- ❌ **Query Intent Classification** - Not implemented (will use OpenAI for intent recognition)
+- ❌ **Response Generation** - Not implemented (will use OpenAI for natural language responses)
 
 **Status:** ⚠️ Partially Ready - Data access layer exists, NLP query processing needed
 
@@ -71,9 +76,10 @@ This document outlines proposed features for the AI Assistant system in the AI P
 
 **Dependencies Check:**
 - ✅ **Session Management** - Implemented (JWT tokens, user sessions)
-- ❌ **Conversation Context Storage** - Not implemented (requires Redis or database table for conversation state)
-- ❌ **Context Management** - Not implemented (requires state machine or context tracking)
-- ❌ **Dialog Management** - Not implemented (requires conversation flow management)
+- ❌ **OpenAI API Integration** - Not implemented (will use OpenAI Chat Completions API for multi-turn conversations)
+- ❌ **Conversation Context Storage** - Not implemented (requires Redis or database table for conversation state/messages)
+- ❌ **Context Management** - Not implemented (will use OpenAI's conversation context with message history)
+- ❌ **Dialog Management** - Not implemented (can leverage OpenAI's built-in conversation memory)
 
 **Status:** ❌ Not Ready - Core session management exists but conversation context system needed
 
@@ -216,8 +222,9 @@ This document outlines proposed features for the AI Assistant system in the AI P
 - ✅ **Event Model** - Implemented
 - ✅ **Event Description** - Implemented (description field)
 - ✅ **Event Title** - Implemented
-- ❌ **Content Analysis** - Not implemented (requires NLP/LLM)
-- ❌ **Preparation Templates** - Not implemented
+- ❌ **OpenAI API Integration** - Not implemented
+- ❌ **Content Analysis** - Not implemented (will use OpenAI to analyze event content and generate preparation suggestions)
+- ❌ **Preparation Templates** - Not implemented (can use OpenAI to generate dynamic preparation checklists)
 
 **Status:** ⚠️ Partially Ready - Event data available, content analysis needed
 
@@ -273,8 +280,9 @@ This document outlines proposed features for the AI Assistant system in the AI P
 - ✅ **Event Model** - Implemented
 - ✅ **Task Model** - Implemented
 - ✅ **Date Filtering** - Implemented
-- ❌ **Summary Generation** - Not implemented (requires template engine or LLM)
-- ❌ **External Data Integration** - Not implemented (weather, news APIs)
+- ❌ **OpenAI API Integration** - Not implemented
+- ❌ **Summary Generation** - Not implemented (will use OpenAI to generate personalized daily summaries)
+- ❌ **External Data Integration** - Not implemented (weather, news APIs - can integrate separately)
 - ❌ **Notification Delivery** - Not implemented
 
 **Status:** ⚠️ Partially Ready - Data access ready, generation and delivery needed
@@ -494,12 +502,12 @@ This document outlines proposed features for the AI Assistant system in the AI P
 - ⚠️ Attendees management (field exists, no user lookup)
 
 **Not Implemented:**
-- ❌ Natural Language Processing (NLP)
-- ❌ Machine Learning models
+- ❌ OpenAI API Integration - Will be implemented using `openai` npm package
+- ❌ Natural Language Processing Service Layer - Will use OpenAI GPT models
 - ❌ External API integrations (email, calendars, messaging)
 - ❌ Notification system (email, push)
 - ❌ Analytics and reporting engine
-- ❌ Conversation context management
+- ❌ Conversation context management - Will use OpenAI + database storage
 - ❌ Real-time processing (WebSockets)
 - ❌ Reminder system
 - ❌ Goals system
@@ -510,8 +518,15 @@ This document outlines proposed features for the AI Assistant system in the AI P
 ## 🚀 Implementation Priority Recommendations
 
 ### Phase 1: Foundation (High Priority)
-1. **NLP Integration Layer** - Core dependency for most AI features
+1. **OpenAI API Integration** - Core dependency for all AI features
+   - Set up OpenAI service wrapper
+   - Configure API keys and authentication
+   - Implement basic prompt system
+   - Set up error handling and rate limiting
 2. **Conversation Context Storage** - Required for multi-turn conversations
+   - Create conversation state table
+   - Implement message history storage
+   - Integrate with OpenAI Chat Completions API
 3. **Notification System** - Required for proactive features
 4. **Analytics Engine** - Foundation for insights
 
@@ -531,39 +546,100 @@ This document outlines proposed features for the AI Assistant system in the AI P
 
 ## 🔧 Technical Requirements
 
+### Implementation Strategy: OpenAI API
+
+We will use **OpenAI API** as the core AI engine for all natural language processing, understanding, and generation tasks.
+
 ### New Dependencies Needed
 
 **Core AI/ML:**
-- NLP Library: `@nlpjs/core`, OpenAI API, or similar
-- Date Parsing: `chrono-node` or similar
-- Intent Classification: Custom or use OpenAI
+- **OpenAI SDK**: `openai` npm package (official OpenAI Node.js library)
+- **Date Parsing**: `chrono-node` or `chrono` for parsing natural language dates (can be combined with OpenAI output)
+- **OpenAI Models**: GPT-4 or GPT-3.5-turbo for text understanding and generation
+- **Embeddings** (optional): `text-embedding-ada-002` for semantic search if needed
 
 **Infrastructure:**
-- Redis: For conversation context and caching
-- Queue System: For async processing (Bull, RabbitMQ)
-- Background Jobs: For reminders and scheduled tasks
+- Redis: For conversation context storage and caching (recommended for performance)
+- Queue System: For async processing (Bull, RabbitMQ) - needed for async OpenAI API calls
+- Background Jobs: For reminders and scheduled AI processing tasks
+- Rate Limiting: OpenAI-specific rate limiting to manage API costs
 
 **External Services:**
-- OpenAI API / Anthropic Claude: For advanced NLP
-- Google Maps API: For location features
-- Weather API: For weather-aware features
-- Email Service: SendGrid, AWS SES, or similar
+- **OpenAI API**: Primary AI service (requires API key configuration)
+  - Chat Completions API for conversations
+  - Completions API for text generation
+  - Embeddings API (if implementing semantic search)
+- Google Maps API: For location features (optional)
+- Weather API: For weather-aware features (optional)
+- Email Service: SendGrid, AWS SES, or similar (for notifications)
 
 **Database Additions:**
-- Conversation state table
-- User preferences table
-- Activity logs table
-- Reminders table
+- Conversation state table (stores message history for context)
+- User preferences table (AI assistant preferences)
+- Activity logs table (for analytics and pattern recognition)
+- Reminders table (for proactive features)
 - Goals table (if implementing goals)
+- AI interaction logs table (for debugging and improvement)
+
+**OpenAI-Specific Considerations:**
+- **API Key Management**: Secure storage of OpenAI API keys (environment variables)
+- **Token Management**: Track token usage for cost control
+- **Model Selection**: Choose between GPT-4 (higher quality) vs GPT-3.5-turbo (cost-effective)
+- **Prompt Engineering**: Design effective prompts for each feature
+- **Function Calling** (optional): Use OpenAI function calling for structured data extraction
+- **Streaming** (optional): Use streaming responses for better UX
+- **Error Handling**: Handle OpenAI API errors, rate limits, and timeouts gracefully
 
 ---
 
-## 📝 Notes
+## 📝 Implementation Notes
+
+### OpenAI API Integration Strategy
+
+**Core Components Needed:**
+1. **OpenAI Service Wrapper** (`backend/src/services/openaiService.js`)
+   - Centralized OpenAI API client
+   - Error handling and retry logic
+   - Token counting and cost tracking
+   - Response streaming support
+
+2. **Prompt Templates** (`backend/src/prompts/`)
+   - Reusable prompt templates for each feature
+   - System messages for role definition
+   - Context-aware prompt building
+
+3. **Intent Router** (`backend/src/services/ai/intentRouter.js`)
+   - Classify user intents using OpenAI
+   - Route to appropriate handlers
+   - Extract structured data from natural language
+
+4. **Conversation Manager** (`backend/src/services/ai/conversationManager.js`)
+   - Maintain conversation context
+   - Store message history
+   - Manage multi-turn conversations
+
+**Cost Management:**
+- Implement token usage tracking
+- Set usage limits per user/organization
+- Cache common queries/responses
+- Use GPT-3.5-turbo for simple tasks, GPT-4 for complex reasoning
+- Implement request batching where possible
+
+**Performance Optimization:**
+- Cache frequently asked questions
+- Use streaming for long responses
+- Implement request queuing for high load
+- Store conversation summaries instead of full history
+
+### General Notes
 
 - This document focuses on backend features. Frontend components would need to be built to interact with these AI features.
 - Some features may require additional database migrations.
-- Consider rate limiting and cost management for external API calls (especially LLM APIs).
 - Security considerations: Ensure AI-processed data is handled securely and user privacy is maintained.
+- OpenAI API keys must be stored securely (environment variables, not in code).
+- Consider implementing usage analytics to monitor AI feature adoption and costs.
+- Test prompts thoroughly to ensure consistent and accurate responses.
+- Implement fallback mechanisms for when OpenAI API is unavailable.
 
 ---
 
