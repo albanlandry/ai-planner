@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import MainLayout from "@/app/layouts/MainLayout";
 import { ProtectedRoute } from "@/lib/auth";
 import { apiService, ApiError } from "@/lib/api";
+import { useChatbot } from "@/app/providers/ChatbotProvider";
 
 type ChatMessage = {
   id: string;
@@ -22,6 +23,7 @@ export default function AIChatPage() {
 }
 
 function AIChatContent() {
+  const { settings } = useChatbot();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -61,9 +63,14 @@ function AIChatContent() {
       const res = await apiService.aiChat({
         message: userMsg.content,
         conversation_id: conversationId,
+        model: settings.model,
+        temperature: settings.temperature,
       });
 
       setConversationId(res.conversation_id);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('chat_conversation_id', res.conversation_id);
+      }
 
       const assistantMsg: ChatMessage = {
         id: crypto.randomUUID(),

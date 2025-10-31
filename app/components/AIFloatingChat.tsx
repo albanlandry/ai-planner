@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { io, Socket } from "socket.io-client";
 import { MessageSquare, X, Minus, Wifi, WifiOff, RefreshCw, Send, Settings as SettingsIcon } from "lucide-react";
 import { useChatbot } from "@/app/providers/ChatbotProvider";
 
@@ -14,16 +15,19 @@ interface ChatMessage {
 
 export default function AIFloatingChat() {
   const [open, setOpen] = useState(false);
+  const [unread, setUnread] = useState(false);
+  const [pos, setPos] = useState<{ x: number; y: number }>({ x: 16, y: 16 });
+  const dragRef = useRef<{ dragging: boolean; startX: number; startY: number; baseX: number; baseY: number }>({ dragging: false, startX: 0, startY: 0, baseX: 16, baseY: 16 });
   const [wsState, setWsState] = useState<WSState>("closed");
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [showSettings, setShowSettings] = useState(false);
   const { settings, setSettings } = useChatbot();
-  const wsRef = useRef<WebSocket | null>(null);
+  const socketRef = useRef<Socket | null>(null);
   const bottomRef = useRef<HTMLDivElement | null>(null);
 
-  const WS_URL = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8000";
-  const WS_PATH = "/ws/ai"; // backend should handle this path
+  const WS_URL = process.env.NEXT_PUBLIC_WS_URL || "http://localhost:8000";
+  const WS_PATH = "/ws/ai"; // socket.io namespace path
 
   useEffect(() => {
     if (!open) return;
@@ -41,38 +45,86 @@ export default function AIFloatingChat() {
   const connect = () => {
     try {
       setWsState("connecting");
-      const socket = new WebSocket(`${WS_URL}${WS_PATH}`);
-      wsRef.current = socket;
+      const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : undefined;
+      const s = io(WS_URL, {
+        path: WS_PATH,
+        transports: ["websocket"],
+        auth: { token },
+        withCredentials: true,
+      });
+      socketRef.current = s;
 
-      socket.onopen = () => {
-        setWsState("open");
-      };
+      s.on('connect', () => setWsState('open'));
+      s.on('disconnect', () => setWsState('closed'));
 
-      socket.onmessage = (ev) => {
+      s.on('chat:chunk', (data: any) => {
         try {
-          const data = JSON.parse(ev.data);
-          if (data.message) {
-            setMessages((prev) => [
-              ...prev,
-              { id: crypto.randomUUID(), role: "assistant", content: data.message },
-            ]);
+          if (data && typeof data.delta === 'string') {
+            // append to streaming assistant message
+            setMessages((prev) => {
+              const last = prev[prev.length - 1];
+              if (last && last.role === 'assistant' && last.id.startsWith('stream-')) {
+                // Update existing streaming message
+                return [
+                  ...prev.slice(0, -1),
+                  { ...last, content: last.content + data.delta },
+                ];
+              }
+              // Create new streaming message
+              return [
+                ...prev,
+                { 
+                  id: `stream-${Date.now()}`, 
+                  role: 'assistant' as const, 
+                  content: data.delta 
+                },
+              ];
+            });
+            if (!open) setUnread(true);
           }
-        } catch {
-          // Fallback plain text
-          setMessages((prev) => [
-            ...prev,
-            { id: crypto.randomUUID(), role: "assistant", content: String(ev.data) },
-          ]);
+        } catch (e) {
+          console.error('chat:chunk error', e);
         }
-      };
-
-      socket.onclose = () => {
-        setWsState("closed");
-      };
-
-      socket.onerror = () => {
-        setWsState("closed");
-      };
+      });
+      s.on('chat:final', (data: any) => {
+        try {
+          if (data && typeof data.message === 'string') {
+            // Save conversation_id to localStorage
+            if (data.conversation_id && typeof window !== 'undefined') {
+              localStorage.setItem('aiConversationId', data.conversation_id);
+            }
+            
+            setMessages((prev) => {
+              // Remove streaming message if exists
+              const filtered = prev.filter(m => !m.id.startsWith('stream-'));
+              // Add final message
+              return [
+                ...filtered,
+                { 
+                  id: crypto.randomUUID(), 
+                  role: 'assistant' as const, 
+                  content: data.message 
+                },
+              ];
+            });
+            if (!open) setUnread(true);
+          }
+        } catch (e) {
+          console.error('chat:final error', e);
+        }
+      });
+      s.on('chat:error', (data: any) => {
+        const errorMsg = data?.message || 'Connection error';
+        setMessages((prev) => [
+          ...prev,
+          { 
+            id: crypto.randomUUID(), 
+            role: 'assistant' as const, 
+            content: `Error: ${errorMsg}` 
+          },
+        ]);
+        console.error('Socket.IO error:', errorMsg);
+      });
     } catch (e) {
       setWsState("closed");
     }
@@ -80,9 +132,9 @@ export default function AIFloatingChat() {
 
   const cleanup = () => {
     try {
-      wsRef.current?.close();
+      socketRef.current?.disconnect();
     } catch {}
-    wsRef.current = null;
+    socketRef.current = null;
     setWsState("closed");
   };
 
@@ -94,18 +146,30 @@ export default function AIFloatingChat() {
   const send = () => {
     const text = input.trim();
     if (!text) return;
-    setMessages((prev) => [...prev, { id: crypto.randomUUID(), role: "user", content: text }]);
+    sendText(text);
+  };
+
+  const sendText = (text: string) => {
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    setMessages((prev) => [...prev, { id: crypto.randomUUID(), role: "user", content: trimmed }]);
     setInput("");
-    const payload = JSON.stringify({
-      message: text,
-      model: settings.model,
-      temperature: settings.temperature,
-    });
+    
+    // Get conversation_id from localStorage
+    const conversationId = typeof window !== 'undefined' 
+      ? localStorage.getItem('aiConversationId') 
+      : null;
+    
     try {
-      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-        wsRef.current.send(payload);
-      }
-    } catch {}
+      socketRef.current?.emit('chat:send', {
+        message: trimmed,
+        conversation_id: conversationId || undefined,
+        model: settings.model,
+        temperature: settings.temperature,
+      });
+    } catch (e) {
+      console.error('Failed to send message:', e);
+    }
   };
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -127,17 +191,40 @@ export default function AIFloatingChat() {
       <button
         aria-label="Open AI Assistant"
         onClick={() => setOpen(true)}
-        className="fixed bottom-4 right-4 z-50 h-12 w-12 rounded-full bg-blue-600 text-white shadow-lg flex items-center justify-center hover:bg-blue-700"
+        className="fixed z-50 h-12 w-12 rounded-full bg-blue-600 text-white shadow-lg flex items-center justify-center hover:bg-blue-700"
+        style={{ right: pos.x, bottom: pos.y, position: 'fixed' as const }}
       >
         <MessageSquare className="w-6 h-6" />
+        {unread && <span className="absolute -top-1 -right-1 h-3 w-3 bg-red-500 rounded-full" />}
       </button>
     );
   }
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 w-[360px] max-w-[92vw] h-[600px] max-h-[85vh] bg-white border border-gray-200 rounded-xl shadow-2xl flex flex-col">
+    <div
+      className="fixed z-50 w-[360px] max-w-[92vw] h-[600px] max-h-[85vh] bg-white border border-gray-200 rounded-xl shadow-2xl flex flex-col"
+      style={{ right: pos.x, bottom: pos.y }}
+    >
       {/* Header */}
-      <div className="h-11 px-3 flex items-center justify-between border-b">
+      <div
+        className="h-11 px-3 flex items-center justify-between border-b cursor-move"
+        onMouseDown={(e) => {
+          dragRef.current.dragging = true;
+          dragRef.current.startX = e.clientX;
+          dragRef.current.startY = e.clientY;
+          dragRef.current.baseX = pos.x;
+          dragRef.current.baseY = pos.y;
+        }}
+        onMouseUp={() => {
+          dragRef.current.dragging = false;
+        }}
+        onMouseMove={(e) => {
+          if (!dragRef.current.dragging) return;
+          const dx = dragRef.current.startX - e.clientX;
+          const dy = dragRef.current.startY - e.clientY;
+          setPos({ x: Math.max(8, dragRef.current.baseX + dx), y: Math.max(8, dragRef.current.baseY + dy) });
+        }}
+      >
         <div className="flex items-center gap-2 text-sm font-medium text-gray-800">
           <MessageSquare className="w-4 h-4 text-blue-600" /> AI Assistant
           <span className="ml-2 inline-flex items-center gap-1 text-xs text-gray-600">
@@ -153,7 +240,7 @@ export default function AIFloatingChat() {
               <RefreshCw className="w-4 h-4" />
             </button>
           )}
-          <button onClick={() => setOpen(false)} className="p-1 text-gray-500 hover:text-gray-700" aria-label="Minimize">
+          <button onClick={() => { setOpen(false); setUnread(false); }} className="p-1 text-gray-500 hover:text-gray-700" aria-label="Minimize">
             <Minus className="w-4 h-4" />
           </button>
           <button onClick={() => { cleanup(); setOpen(false); }} className="p-1 text-gray-500 hover:text-gray-700" aria-label="Close">
@@ -208,6 +295,16 @@ export default function AIFloatingChat() {
         {messages.length === 0 && (
           <div className="text-center text-gray-500 text-sm mt-6">
             Type your message below to start chatting.
+          </div>
+        )}
+        {/* Quick Suggestions */}
+        {messages.length === 0 && (
+          <div className="flex flex-wrap gap-2 justify-center mt-2">
+            {['What do I have tomorrow?', 'Create a task to call Sarah tomorrow', 'Suggest a meeting next week'].map((s) => (
+              <button key={s} onClick={() => sendText(s)} className="px-3 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded-full border">
+                {s}
+              </button>
+            ))}
           </div>
         )}
         {messages.map((m) => (

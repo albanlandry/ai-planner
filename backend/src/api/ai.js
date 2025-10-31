@@ -79,6 +79,11 @@ router.post('/chat', authenticateToken, async (req, res) => {
     let error = null;
 
     try {
+      // Guard advanced models
+      const requestedModel = req.body.model || process.env.OPENAI_MODEL || 'gpt-3.5-turbo';
+      if (requestedModel.toLowerCase().includes('gpt-4') && req.user.role !== 'admin') {
+        return res.status(403).json({ error: 'Access to requested model is restricted' });
+      }
       // Classify user intent
       const intentResult = await intentRouter.classifyIntent(message.trim(), {
         conversation_id,
