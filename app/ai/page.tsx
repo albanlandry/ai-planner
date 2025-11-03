@@ -11,13 +11,15 @@ type ChatMessage = {
   role: "user" | "assistant";
   content: string;
   intent?: string;
-  action?: any;
+  action?: unknown;
 };
 
 export default function AIChatPage() {
   return (
     <ProtectedRoute>
-      <AIChatContent />
+      <MainLayout>
+        <AIChatContent />
+      </MainLayout>
     </ProtectedRoute>
   );
 }
@@ -37,7 +39,7 @@ function AIChatContent() {
       try {
         const h = await apiService.aiHealth();
         setHealth({ enabled: h.enabled, message: h.message });
-      } catch (e) {
+      } catch {
         setHealth({ enabled: false, message: "AI service health check failed" });
       }
     })();
@@ -82,7 +84,7 @@ function AIChatContent() {
       };
 
       setMessages((prev) => [...prev, assistantMsg]);
-    } catch (e: any) {
+    } catch (e: unknown) {
       const msg = e instanceof ApiError ? e.message : "Failed to send message";
       setError(msg);
     } finally {
@@ -97,23 +99,29 @@ function AIChatContent() {
     }
   };
 
+  type MinimalEvent = { id: string; title: string; start_time: string; end_time?: string };
+  type MinimalTask = { id: string; title: string; due_date?: string; priority?: string };
+  type ActionPayload = { event?: MinimalEvent; task?: MinimalTask; events?: MinimalEvent[]; tasks?: MinimalTask[] };
+
   const renderAction = (m: ChatMessage) => {
     if (!m.action) return null;
+    const action = m.action as ActionPayload;
     // Render simple cards for created items or query results
-    if (m.intent === "create_event" && m.action.event) {
-      const ev = m.action.event;
+    if (m.intent === "create_event" && action.event) {
+      const ev = action.event;
+      const endStr = ev.end_time ? new Date(ev.end_time).toLocaleString() : '';
       return (
         <div className="mt-2 border rounded-md p-3 bg-blue-50 text-blue-900 text-sm">
           <div className="font-semibold">Event created</div>
           <div className="mt-1">{ev.title}</div>
           <div className="text-xs text-blue-800">
-            {new Date(ev.start_time).toLocaleString()} → {new Date(ev.end_time).toLocaleString()}
+            {new Date(ev.start_time).toLocaleString()} {endStr ? `→ ${endStr}` : ""}
           </div>
         </div>
       );
     }
-    if (m.intent === "create_task" && m.action.task) {
-      const t = m.action.task;
+    if (m.intent === "create_task" && action.task) {
+      const t = action.task;
       return (
         <div className="mt-2 border rounded-md p-3 bg-green-50 text-green-900 text-sm">
           <div className="font-semibold">Task created</div>
@@ -126,15 +134,15 @@ function AIChatContent() {
       );
     }
     if (m.intent?.startsWith("query_")) {
-      const hasEvents = Array.isArray(m.action?.events) && m.action.events.length > 0;
-      const hasTasks = Array.isArray(m.action?.tasks) && m.action.tasks.length > 0;
+      const hasEvents = Array.isArray(action?.events) && action.events!.length > 0;
+      const hasTasks = Array.isArray(action?.tasks) && action.tasks!.length > 0;
       return (
         <div className="mt-2 grid gap-2">
           {hasEvents && (
             <div className="border rounded-md p-3 bg-gray-50">
               <div className="font-semibold mb-1">Events</div>
               <ul className="text-sm list-disc ml-5">
-                {m.action.events.map((e: any) => (
+                {(action.events as MinimalEvent[]).map((e) => (
                   <li key={e.id}>
                     {e.title} — {new Date(e.start_time).toLocaleString()}
                   </li>
@@ -146,11 +154,14 @@ function AIChatContent() {
             <div className="border rounded-md p-3 bg-gray-50">
               <div className="font-semibold mb-1">Tasks</div>
               <ul className="text-sm list-disc ml-5">
-                {m.action.tasks.map((t: any) => (
-                  <li key={t.id}>
-                    {t.title} {t.due_date ? `— due ${new Date(t.due_date).toLocaleDateString()}` : ""}
-                  </li>
-                ))}
+                {(action.tasks as MinimalTask[]).map((t) => {
+                  const due = t.due_date ? new Date(t.due_date).toLocaleDateString() : null;
+                  return (
+                    <li key={t.id}>
+                      {t.title} {due ? `— due ${due}` : ""}
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           )}
@@ -161,8 +172,7 @@ function AIChatContent() {
   };
 
   return (
-    <MainLayout>
-      <div className="flex-1 overflow-auto bg-white">
+    <div className="flex-1 overflow-auto bg-white">
         <div className="max-w-4xl mx-auto p-4 sm:p-6 lg:p-8">
           <div className="mb-4">
             <h1 className="text-2xl font-bold text-gray-900">AI Assistant</h1>
@@ -178,7 +188,7 @@ function AIChatContent() {
             <div className="flex-1 overflow-auto p-4 space-y-4">
               {messages.length === 0 && (
                 <div className="text-center text-gray-500 mt-10">
-                  Start by asking: "What do I have tomorrow?" or "Create a task to call Sarah tomorrow"
+                  Start by asking: &quot;What do I have tomorrow?&quot; or &quot;Create a task to call Sarah tomorrow&quot;
                 </div>
               )}
               {messages.map((m) => (
@@ -237,7 +247,6 @@ function AIChatContent() {
           </div>
         </div>
       </div>
-    </MainLayout>
   );
 }
 
