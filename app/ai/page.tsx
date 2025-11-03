@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import MainLayout from "@/app/layouts/MainLayout";
 import { ProtectedRoute } from "@/lib/auth";
-import { apiService, ApiError } from "@/lib/api";
+import { apiService, ApiError, AIKbFile, AIKbText, AIKbLink } from "@/lib/api";
 import { useChatbot } from "@/app/providers/ChatbotProvider";
 
 type ChatMessage = {
@@ -24,8 +24,11 @@ export default function AIChatPage() {
   );
 }
 
+type TabKey = "chat" | "knowledge";
+
 function AIChatContent() {
   const { settings } = useChatbot();
+  const [tab, setTab] = useState<TabKey>("chat");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -33,6 +36,14 @@ function AIChatContent() {
   const [conversationId, setConversationId] = useState<string | undefined>();
   const [health, setHealth] = useState<{ enabled: boolean; message: string } | null>(null);
   const bottomRef = useRef<HTMLDivElement | null>(null);
+
+  // Knowledge Base state
+  const [kbFiles, setKbFiles] = useState<AIKbFile[]>([]);
+  const [kbTexts, setKbTexts] = useState<AIKbText[]>([]);
+  const [kbLinks, setKbLinks] = useState<AIKbLink[]>([]);
+  const [kbUploading, setKbUploading] = useState(false);
+  const [kbNewText, setKbNewText] = useState({ title: "", content: "" });
+  const [kbNewLink, setKbNewLink] = useState("");
 
   useEffect(() => {
     (async () => {
@@ -48,6 +59,20 @@ function AIChatContent() {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
+
+  useEffect(() => {
+    if (tab !== "knowledge") return;
+    (async () => {
+      try {
+        const res = await apiService.aiKbList();
+        setKbFiles(res.files || []);
+        setKbTexts(res.texts || []);
+        setKbLinks(res.links || []);
+      } catch {
+        // If backend not ready, keep empty silently
+      }
+    })();
+  }, [tab]);
 
   const sendMessage = async () => {
     if (!input.trim() || loading) return;
@@ -174,16 +199,32 @@ function AIChatContent() {
   return (
     <div className="flex-1 overflow-auto bg-white">
         <div className="max-w-4xl mx-auto p-4 sm:p-6 lg:p-8">
-          <div className="mb-4">
-            <h1 className="text-2xl font-bold text-gray-900">AI Assistant</h1>
-            {health && (
-              <p className={`text-sm mt-1 ${health.enabled ? "text-green-700" : "text-red-700"}`}>
-                {health.message}
-              </p>
-            )}
+        <div className="mb-4">
+          <h1 className="text-2xl font-bold text-gray-900">AI Assistant</h1>
+          {health && (
+            <p className={`text-sm mt-1 ${health.enabled ? "text-green-700" : "text-red-700"}`}>
+              {health.message}
+            </p>
+          )}
+          {/* Tabs */}
+          <div className="mt-4 inline-flex bg-gray-100 rounded-lg p-1">
+            <button
+              onClick={() => setTab("chat")}
+              className={`px-3 py-1.5 rounded-md text-sm font-medium ${tab === "chat" ? "bg-white shadow-sm" : "text-gray-600 hover:text-gray-900"}`}
+            >
+              Chat
+            </button>
+            <button
+              onClick={() => setTab("knowledge")}
+              className={`px-3 py-1.5 rounded-md text-sm font-medium ${tab === "knowledge" ? "bg-white shadow-sm" : "text-gray-600 hover:text-gray-900"}`}
+            >
+              Knowledge Base
+            </button>
           </div>
+        </div>
 
-          <div className="border rounded-xl bg-white shadow-sm h-[65vh] flex flex-col">
+        {tab === "chat" && (
+        <div className="border rounded-xl bg-white shadow-sm h-[65vh] flex flex-col">
             {/* Messages */}
             <div className="flex-1 overflow-auto p-4 space-y-4">
               {messages.length === 0 && (
@@ -245,8 +286,128 @@ function AIChatContent() {
               </div>
             </div>
           </div>
-        </div>
+        )}
+
+        {tab === "knowledge" && (
+          <div className="space-y-6">
+            {/* Upload files */}
+            <section className="border rounded-xl p-4">
+              <h2 className="text-lg font-semibold mb-2">Upload Files</h2>
+              <p className="text-sm text-gray-600 mb-3">PDF, TXT, DOCX 등 문서를 업로드하여 지식베이스로 사용할 수 있습니다.</p>
+              <div className="flex items-center gap-3">
+                <input id="kb-files" type="file" multiple className="text-sm" />
+                <button
+                  onClick={async () => {
+                    const input = document.getElementById('kb-files') as HTMLInputElement | null;
+                    if (!input || !input.files || input.files.length === 0) return;
+                    setKbUploading(true);
+                    try {
+                      const res = await apiService.aiKbUpload(Array.from(input.files));
+                      setKbFiles((prev) => [...res.files, ...prev]);
+                      input.value = '';
+                    } catch {
+                      // silent for now
+                    } finally {
+                      setKbUploading(false);
+                    }
+                  }}
+                  disabled={kbUploading}
+                  className={`px-3 py-1.5 rounded-md text-sm font-medium ${kbUploading ? 'bg-gray-200 text-gray-500' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
+                >
+                  {kbUploading ? 'Uploading...' : 'Upload'}
+                </button>
+              </div>
+              {kbFiles.length > 0 && (
+                <ul className="mt-3 text-sm text-gray-800 list-disc ml-5">
+                  {kbFiles.map(f => (
+                    <li key={f.id}>{f.filename} <span className="text-gray-500">({Math.round(f.size_bytes/1024)} KB)</span></li>
+                  ))}
+                </ul>
+              )}
+            </section>
+
+            {/* Create Texts */}
+            <section className="border rounded-xl p-4">
+              <h2 className="text-lg font-semibold mb-2">Create Text Snippets</h2>
+              <div className="grid gap-2">
+                <input
+                  value={kbNewText.title}
+                  onChange={(e) => setKbNewText({ ...kbNewText, title: e.target.value })}
+                  placeholder="Title"
+                  className="border rounded-md p-2 text-sm"
+                />
+                <textarea
+                  value={kbNewText.content}
+                  onChange={(e) => setKbNewText({ ...kbNewText, content: e.target.value })}
+                  rows={4}
+                  placeholder="Write content to store as knowledge..."
+                  className="border rounded-md p-2 text-sm"
+                />
+                <div>
+                  <button
+                    onClick={async () => {
+                      if (!kbNewText.title.trim() || !kbNewText.content.trim()) return;
+                      try {
+                        const saved = await apiService.aiKbCreateText({ title: kbNewText.title.trim(), content: kbNewText.content.trim() });
+                        setKbTexts((prev) => [saved, ...prev]);
+                        setKbNewText({ title: '', content: '' });
+                      } catch {}
+                    }}
+                    className="px-3 py-1.5 rounded-md text-sm font-medium bg-blue-600 text-white hover:bg-blue-700"
+                  >
+                    Save
+                  </button>
+                </div>
+              </div>
+              {kbTexts.length > 0 && (
+                <ul className="mt-3 space-y-2">
+                  {kbTexts.map(t => (
+                    <li key={t.id} className="border rounded-md p-2">
+                      <div className="text-sm font-medium">{t.title}</div>
+                      <div className="text-sm text-gray-700 whitespace-pre-wrap mt-1 line-clamp-3">{t.content}</div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+
+            {/* Website Links */}
+            <section className="border rounded-xl p-4">
+              <h2 className="text-lg font-semibold mb-2">Add Website Links</h2>
+              <div className="flex items-center gap-2">
+                <input
+                  value={kbNewLink}
+                  onChange={(e) => setKbNewLink(e.target.value)}
+                  placeholder="https://example.com/page"
+                  className="flex-1 border rounded-md p-2 text-sm"
+                />
+                <button
+                  onClick={async () => {
+                    const url = kbNewLink.trim();
+                    if (!/^https?:\/\//i.test(url)) return;
+                    try {
+                      const saved = await apiService.aiKbAddLink({ url });
+                      setKbLinks((prev) => [saved, ...prev]);
+                      setKbNewLink('');
+                    } catch {}
+                  }}
+                  className="px-3 py-1.5 rounded-md text-sm font-medium bg-blue-600 text-white hover:bg-blue-700"
+                >
+                  Add
+                </button>
+              </div>
+              {kbLinks.length > 0 && (
+                <ul className="mt-3 text-sm list-disc ml-5">
+                  {kbLinks.map(l => (
+                    <li key={l.id}><a href={l.url} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">{l.url}</a></li>
+                  ))}
+                </ul>
+              )}
+            </section>
+          </div>
+        )}
       </div>
+    </div>
   );
 }
 

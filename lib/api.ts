@@ -306,6 +306,36 @@ class ApiService {
       }
     );
   }
+
+  // AI Knowledge Base endpoints (UI-first; backend should implement matching routes)
+  async aiKbList() {
+    return this.request<{ files: AIKbFile[]; texts: AIKbText[]; links: AIKbLink[] }>(`/ai/kb`);
+  }
+
+  async aiKbUpload(files: File[]) {
+    const form = new FormData();
+    files.forEach((f) => form.append('files', f));
+    // Intentionally omit JSON header to allow multipart
+    return this.request<{ files: AIKbFile[] }>(`/ai/kb/files`, {
+      method: 'POST',
+      body: form as any,
+      headers: {},
+    });
+  }
+
+  async aiKbCreateText(payload: { title: string; content: string }) {
+    return this.request<AIKbText>(`/ai/kb/texts`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async aiKbAddLink(payload: { url: string }) {
+    return this.request<AIKbLink>(`/ai/kb/links`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
 }
 
 // Types
@@ -429,6 +459,27 @@ export interface UpdateTaskData {
   calendar_id?: string;
   organization_id?: string;
   team_id?: string;
+}
+
+// AI Knowledge Base types
+export interface AIKbFile {
+  id: string;
+  filename: string;
+  size_bytes: number;
+  uploaded_at: string; // ISO
+}
+
+export interface AIKbText {
+  id: string;
+  title: string;
+  content: string;
+  created_at: string; // ISO
+}
+
+export interface AIKbLink {
+  id: string;
+  url: string;
+  created_at: string; // ISO
 }
 
 // Create singleton instance
