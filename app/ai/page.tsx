@@ -49,6 +49,7 @@ function AIChatContent() {
 
   const sendMessage = async () => {
     if (!input.trim() || loading) return;
+    
     setError("");
     const userMsg: ChatMessage = {
       id: crypto.randomUUID(),
