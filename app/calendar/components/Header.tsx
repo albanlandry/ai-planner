@@ -1,19 +1,32 @@
 "use client";
 
-import { Plus, Search, Calendar as CalendarIcon, Menu } from "lucide-react";
+import { Plus, Search, ChevronLeft, ChevronRight, Calendar as CalendarIcon, Menu } from "lucide-react";
 import { ViewType } from "./CalendarApp";
+import { addDays, subDays, addWeeks, subWeeks, addMonths, subMonths, format } from "date-fns";
 import UserMenu from "./UserMenu";
 
 interface HeaderProps {
   view: ViewType;
   setView: (view: ViewType) => void;
   currentDate: Date;
+  setCurrentDate: (d: Date) => void;
   sidebarOpen: boolean;
   setSidebarOpen: (open: boolean) => void;
   onCreateEvent: () => void;
 }
 
-export default function Header({ view, setView, currentDate, sidebarOpen, setSidebarOpen, onCreateEvent }: HeaderProps) {
+export default function Header({ view, setView, currentDate, setCurrentDate, sidebarOpen, setSidebarOpen, onCreateEvent }: HeaderProps) {
+  const goPrev = () => {
+    if (view === "day") setCurrentDate(subDays(currentDate, 1));
+    else if (view === "week") setCurrentDate(subWeeks(currentDate, 1));
+    else setCurrentDate(subMonths(currentDate, 1));
+  };
+  const goNext = () => {
+    if (view === "day") setCurrentDate(addDays(currentDate, 1));
+    else if (view === "week") setCurrentDate(addWeeks(currentDate, 1));
+    else setCurrentDate(addMonths(currentDate, 1));
+  };
+  const goToday = () => setCurrentDate(new Date());
   return (
     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 sm:p-4 border-b border-gray-200 gap-3 sm:gap-0 bg-white">
       {/* left: menu toggle + search */}
@@ -37,10 +50,29 @@ export default function Header({ view, setView, currentDate, sidebarOpen, setSid
       {/* center: date range + view toggle */}
       <div className="flex-1 flex items-center justify-center w-full sm:w-auto">
         <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-4">
-          <div className="text-sm font-medium text-gray-700 text-center sm:text-left">
-            {formatDateRange(currentDate, view)}
+          <div className="flex items-center gap-2">
+            <button onClick={goPrev} className="p-1.5 rounded hover:bg-gray-100" aria-label="Previous">
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <div className="text-sm font-medium text-gray-700 text-center sm:text-left min-w-[160px]">
+              {formatDateRange(currentDate, view)}
+            </div>
+            <button onClick={goNext} className="p-1.5 rounded hover:bg-gray-100" aria-label="Next">
+              <ChevronRight className="w-4 h-4" />
+            </button>
+            <button onClick={goToday} className="ml-2 text-xs px-2 py-1 rounded border hover:bg-gray-50">Today</button>
           </div>
           <div className="bg-gray-100 p-1 rounded-lg flex items-center gap-1">
+            <button
+              onClick={() => setView("day")}
+              className={`px-3 sm:px-4 py-1.5 rounded-md text-xs sm:text-sm font-semibold transition-colors ${
+                view === "day" 
+                  ? "bg-blue-600 text-white shadow-sm" 
+                  : "text-gray-600 hover:text-gray-900"
+              }`}
+            >
+              DAY
+            </button>
             <button
               onClick={() => setView("week")}
               className={`px-3 sm:px-4 py-1.5 rounded-md text-xs sm:text-sm font-semibold transition-colors ${
@@ -82,6 +114,9 @@ export default function Header({ view, setView, currentDate, sidebarOpen, setSid
 
 function formatDateRange(date: Date, view: ViewType) {
   // Small helper to show month/year or week label depending on view.
+  if (view === "day") {
+    return format(date, "MMMM d, yyyy");
+  }
   if (view === "month") {
     return date.toLocaleString(undefined, { month: "long", year: "numeric" });
   }

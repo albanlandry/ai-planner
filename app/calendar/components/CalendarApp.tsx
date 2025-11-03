@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { startOfWeek, endOfWeek, startOfMonth, endOfMonth } from "date-fns";
+import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfDay, endOfDay } from "date-fns";
 import Header from "./Header";
 import Sidebar from "./Sidebar";
 import WeekView from "./WeekView";
+import DayView from "./DayView";
 import MonthView from "./MonthView";
 import EventForm from "./EventForm";
 import CalendarForm from "./CalendarForm";
@@ -12,13 +13,13 @@ import { useCalendarStore } from "@/stores/calendarStore";
 import { useTaskStore } from "@/stores/taskStore";
 import { Event, Calendar, CreateEventData, UpdateEventData, CreateCalendarData, UpdateCalendarData } from "@/lib/api";
 
-export type ViewType = "week" | "month";
+export type ViewType = "day" | "week" | "month";
 
 export default function CalendarApp() {
   const [view, setView] = useState<ViewType>(() => {
     if (typeof window !== 'undefined') {
       const stored = localStorage.getItem('calendarView');
-      if (stored === 'week' || stored === 'month') {
+      if (stored === 'day' || stored === 'week' || stored === 'month') {
         return stored as ViewType;
       }
     }
@@ -70,12 +71,18 @@ export default function CalendarApp() {
   // Fetch events when date changes or calendars are loaded
   useEffect(() => {
     if (calendars.length > 0) {
-      const startDate = view === "week" 
-        ? startOfWeek(currentDate, { weekStartsOn: 1 })
-        : startOfMonth(currentDate);
-      const endDate = view === "week"
-        ? endOfWeek(currentDate, { weekStartsOn: 1 })
-        : endOfMonth(currentDate);
+      const startDate =
+        view === "day"
+          ? startOfDay(currentDate)
+          : view === "week"
+          ? startOfWeek(currentDate, { weekStartsOn: 1 })
+          : startOfMonth(currentDate);
+      const endDate =
+        view === "day"
+          ? endOfDay(currentDate)
+          : view === "week"
+          ? endOfWeek(currentDate, { weekStartsOn: 1 })
+          : endOfMonth(currentDate);
 
       fetchEvents(startDate, endDate);
     }
@@ -200,6 +207,7 @@ export default function CalendarApp() {
         view={view}
         setView={setView}
         currentDate={currentDate}
+        setCurrentDate={setCurrentDate}
         sidebarOpen={calendarSidebarOpen}
         setSidebarOpen={setCalendarSidebarOpen}
         onCreateEvent={handleCreateEvent}
@@ -209,7 +217,14 @@ export default function CalendarApp() {
       <div className="flex-1 flex overflow-hidden bg-white">
         {/* Main Calendar View */}
         <div className="flex-1 overflow-auto p-2 sm:p-4">
-          {view === "week" ? (
+          {view === "day" ? (
+            <DayView 
+              currentDate={currentDate}
+              events={events}
+              onEventClick={handleEditEvent}
+              onEventDelete={handleDeleteEvent}
+            />
+          ) : view === "week" ? (
             <WeekView 
               currentDate={currentDate} 
               events={events}
