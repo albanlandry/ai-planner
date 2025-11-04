@@ -1,11 +1,11 @@
 # Development Dockerfile for Next.js with hot reloading
-FROM node:20-alpine
+# Multi-stage build to optimize image size
 
-# Set working directory
-WORKDIR /app
-
-# Install dependencies
+# Stage 1: Dependencies installation
+FROM node:20-alpine AS deps
 RUN apk add --no-cache libc6-compat
+
+WORKDIR /app
 
 # Copy package files
 COPY package.json package-lock.json* ./
@@ -13,12 +13,25 @@ COPY package.json package-lock.json* ./
 # Install dependencies
 RUN npm install --legacy-peer-deps
 
+# Stage 2: Development runtime
+FROM node:20-alpine AS runner
+
+WORKDIR /app
+
 # Create non-root user
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
+RUN addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 nextjs
+
+# Copy only node_modules from deps stage
+COPY --from=deps /app/node_modules ./node_modules
+
+# Copy package files (needed for npm scripts)
+COPY package.json package-lock.json* ./
 
 # Create .next directory and change ownership
-RUN mkdir -p /app/.next && chown -R nextjs:nodejs /app
+RUN mkdir -p /app/.next && \
+    chown -R nextjs:nodejs /app
+
 USER nextjs
 
 # Expose port

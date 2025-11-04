@@ -12,6 +12,7 @@ const Calendar = require('../models/Calendar');
 const Task = require('../models/Task');
 const Event = require('../models/Event');
 const openaiService = require('../services/openaiService');
+const mcpServer = require('../mcp/server');
 
 const router = express.Router();
 
@@ -443,6 +444,57 @@ router.get('/health', authenticateToken, async (req, res) => {
   } catch (error) {
     console.error('AI health check error:', error);
     res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * MCP Server Endpoints
+ */
+
+/**
+ * Get available MCP capabilities
+ * GET /api/ai/mcp/capabilities
+ */
+router.get('/mcp/capabilities', authenticateToken, async (req, res) => {
+  try {
+    const capabilities = mcpServer.getAvailableCapabilities();
+    res.json({
+      capabilities,
+      count: capabilities.length,
+    });
+  } catch (error) {
+    console.error('MCP capabilities error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * Execute an MCP capability
+ * POST /api/ai/mcp/execute
+ */
+router.post('/mcp/execute', authenticateToken, async (req, res) => {
+  try {
+    const { capability, params = {} } = req.body;
+
+    if (!capability) {
+      return res.status(400).json({ error: 'Capability name is required' });
+    }
+
+    const result = await mcpServer.executeCapability(capability, req.user.id, params);
+    
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+
+    res.json(result);
+  } catch (error) {
+    console.error('MCP execute error:', error);
+    res.status(500).json({
+      success: false,
+      data: null,
+      error: error.message,
+      execution_time_ms: 0,
+    });
   }
 });
 
