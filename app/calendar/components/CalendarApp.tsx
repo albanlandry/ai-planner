@@ -46,7 +46,7 @@ export default function CalendarApp() {
     deleteCalendar
   } = useCalendarStore();
 
-  const { fetchTasks } = useTaskStore();
+  const { fetchTasks, tasks } = useTaskStore();
 
   // Note: fetchCurrentUser is already called by ProtectedRoute wrapper
   // No need to call it again here
@@ -221,6 +221,7 @@ export default function CalendarApp() {
             <DayView 
               currentDate={currentDate}
               events={events}
+              tasks={tasks}
               onEventClick={handleEditEvent}
               onEventDelete={handleDeleteEvent}
             />
@@ -228,6 +229,7 @@ export default function CalendarApp() {
             <WeekView 
               currentDate={currentDate} 
               events={events}
+              tasks={tasks}
               onEventClick={handleEditEvent}
               onEventDelete={handleDeleteEvent}
             />

@@ -16,20 +16,24 @@ import {
   isBefore,
 } from "date-fns";
 import EventBlock from "./EventBlock";
-import { Event, UpdateEventData } from "@/lib/api";
+import TaskBlock from "./TaskBlock";
+import { Event, UpdateEventData, Task } from "@/lib/api";
 import { useCalendarStore } from "@/stores/calendarStore";
+import { ChevronDown, ChevronUp } from "lucide-react";
 
 interface WeekViewProps {
   currentDate: Date;
   events: Event[];
+  tasks: Task[];
   onEventClick: (event: Event) => void;
   onEventDelete: (eventId: string) => void;
 }
 
-export default function WeekView({ currentDate, events, onEventClick, onEventDelete }: WeekViewProps) {
+export default function WeekView({ currentDate, events, tasks, onEventClick, onEventDelete }: WeekViewProps) {
   const { updateEvent } = useCalendarStore();
   const [draggedEvent, setDraggedEvent] = useState<any>(null);
   const [dragOverCell, setDragOverCell] = useState<Date | null>(null);
+  const [showEarlyHours, setShowEarlyHours] = useState(false);
 
   const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
@@ -77,10 +81,41 @@ export default function WeekView({ currentDate, events, onEventClick, onEventDel
     [draggedEvent, updateEvent]
   );
 
+  const gridStartHour = showEarlyHours ? 0 : 8;
+  const gridEndHour = 24;
+  const totalHours = gridEndHour - gridStartHour;
+
   return (
     <div className="grid grid-cols-8 gap-0 border border-gray-100 rounded-lg overflow-hidden overflow-x-auto">
       <div className="col-span-1">
-        <div className="h-12 border-b border-gray-100" />
+        <div className="h-12 border-b border-gray-100 flex items-center justify-end pr-2">
+          <button
+            onClick={() => setShowEarlyHours(!showEarlyHours)}
+            className="p-1 hover:bg-gray-100 rounded transition-colors"
+            title={showEarlyHours ? "Hide early hours (00:00-8:00)" : "Show early hours (00:00-8:00)"}
+          >
+            {showEarlyHours ? (
+              <ChevronUp className="w-4 h-4 text-gray-500" />
+            ) : (
+              <ChevronDown className="w-4 h-4 text-gray-500" />
+            )}
+          </button>
+        </div>
+        {showEarlyHours && (
+          <>
+            {Array.from({ length: 8 }, (_, i) => {
+              const hour = i;
+              return (
+                <div
+                  key={hour}
+                  className="h-20 border-b border-gray-100 text-xs text-gray-500 text-right pr-2 pt-1"
+                >
+                  {hour}:00
+                </div>
+              );
+            })}
+          </>
+        )}
         {Array.from({ length: 16 }, (_, i) => {
           const hour = 8 + i;
           return (
@@ -112,6 +147,13 @@ export default function WeekView({ currentDate, events, onEventClick, onEventDel
             return aStart.getTime() - bStart.getTime();
           });
 
+        // Filter tasks for this day
+        const dayTasks = tasks.filter((task) => {
+          if (!task.due_date) return false;
+          const taskDate = new Date(task.due_date);
+          return isSameDay(taskDate, day) && task.status !== 'done';
+        });
+
         return (
           <div
             key={idx}
@@ -135,7 +177,22 @@ export default function WeekView({ currentDate, events, onEventClick, onEventDel
                 {format(day, "d")}
               </div>
             </div>
-            <div className="relative h-full min-h-[1280px]">
+            <div className="relative h-full" style={{ minHeight: `${totalHours * 80}px` }}>
+              {/* Render tasks in early hours (00:00) */}
+              {showEarlyHours && (
+                <div className="absolute top-0 left-1 right-1" style={{ height: '640px' }}>
+                  {dayTasks.map((task, taskIdx) => (
+                    <div
+                      key={task.id}
+                      className="absolute left-1 right-1 mb-1"
+                      style={{ top: `${taskIdx * 30}px`, height: '28px' }}
+                    >
+                      <TaskBlock task={task} />
+                    </div>
+                  ))}
+                </div>
+              )}
+              {/* Render events */}
               {dayEvents.map((event) => {
                 const eventStart = new Date(event.start_time);
                 const eventEnd = new Date(event.end_time);
@@ -145,9 +202,7 @@ export default function WeekView({ currentDate, events, onEventClick, onEventDel
                 const visibleEnd = isBefore(eventEnd, dayEnd) ? eventEnd : dayEnd;
                 
                 // Calculate position and height based on visible portion
-                // Clamp visible times to grid bounds (8:00 - 24:00)
-                const gridStartHour = 8;
-                const gridEndHour = 24;
+                // Clamp visible times to grid bounds
                 const gridStartTime = setHours(day, gridStartHour);
                 const gridEndTime = setHours(day, gridEndHour);
                 
@@ -161,14 +216,31 @@ export default function WeekView({ currentDate, events, onEventClick, onEventDel
                 
                 const visibleStartHour = clampedStart.getHours();
                 const visibleStartMinutes = clampedStart.getMinutes();
-                const top = Math.max(0, (visibleStartHour - gridStartHour) * 80 + (visibleStartMinutes / 60) * 80);
+                
+                // If event is in early hours (0-8) and early hours are shown, position from top
+                // If event is after 8:00, offset by early hours section (640px) when shown
+                let top: number;
+                if (visibleStartHour < 8) {
+                  // Event in early hours
+                  top = showEarlyHours ? (visibleStartHour * 80 + (visibleStartMinutes / 60) * 80) : -9999; // Hide if early hours not shown
+                } else {
+                  // Event after 8:00
+                  const earlyHoursOffset = showEarlyHours ? 640 : 0;
+                  top = earlyHoursOffset + ((visibleStartHour - 8) * 80 + (visibleStartMinutes / 60) * 80);
+                }
+                
+                // Skip if event is hidden (early hours not shown)
+                if (top < 0) {
+                  return null;
+                }
                 
                 // Calculate duration in minutes for the visible portion
                 const durationMinutes = (clampedEnd.getTime() - clampedStart.getTime()) / (1000 * 60);
                 const height = Math.max(20, (durationMinutes / 60) * 80);
                 
                 // Ensure height doesn't exceed grid bounds
-                const maxHeight = (gridEndHour - gridStartHour) * 80 - top;
+                const containerHeight = showEarlyHours ? (totalHours * 80) : (16 * 80);
+                const maxHeight = containerHeight - top;
                 const finalHeight = Math.min(height, maxHeight);
 
                 return (
