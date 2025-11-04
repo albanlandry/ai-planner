@@ -16,7 +16,11 @@
     "docker:logs": "docker-compose -f docker-compose.dev.yml logs -f",
     "docker:backend:logs": "docker-compose -f docker-compose.dev.yml logs -f backend",
     "docker:frontend:logs": "docker-compose -f docker-compose.dev.yml logs -f frontend",
-    "docker:clean": "docker-compose -f docker-compose.dev.yml down -v --remove-orphans"
+    "docker:clean": "docker-compose -f docker-compose.dev.yml down -v --remove-orphans",
+    "docker:backend:test": "docker-compose -f docker-compose.dev.yml exec backend npm test",
+    "docker:backend:test:watch": "docker-compose -f docker-compose.dev.yml exec backend npm run test:watch",
+    "docker:backend:test:coverage": "docker-compose -f docker-compose.dev.yml exec backend npm run test:coverage",
+    "docker:backend:test:mcp": "docker-compose -f docker-compose.dev.yml exec backend npm run test:mcp"
   },
   "dependencies": {
     "date-fns": "^4.1.0",
