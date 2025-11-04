@@ -10,6 +10,10 @@ import {
   setHours,
   setMinutes,
   isSameDay,
+  startOfDay,
+  endOfDay,
+  isAfter,
+  isBefore,
 } from "date-fns";
 import EventBlock from "./EventBlock";
 import { Event, UpdateEventData } from "@/lib/api";
@@ -91,10 +95,16 @@ export default function WeekView({ currentDate, events, onEventClick, onEventDel
       </div>
 
       {weekDays.map((day, idx) => {
+        const dayStart = startOfDay(day);
+        const dayEnd = endOfDay(day);
+        
+        // Filter events that overlap with this day
         const dayEvents = events
           .filter((e) => {
             const eventStart = new Date(e.start_time);
-            return isSameDay(eventStart, day);
+            const eventEnd = new Date(e.end_time);
+            // Event overlaps with this day if it starts before day ends and ends after day starts
+            return eventStart <= dayEnd && eventEnd >= dayStart;
           })
           .sort((a, b) => {
             const aStart = new Date(a.start_time);
@@ -129,17 +139,43 @@ export default function WeekView({ currentDate, events, onEventClick, onEventDel
               {dayEvents.map((event) => {
                 const eventStart = new Date(event.start_time);
                 const eventEnd = new Date(event.end_time);
-                const sh = eventStart.getHours();
-                const sm = eventStart.getMinutes();
-                const top = (sh - 8) * 80 + (sm / 60) * 80;
-                const duration = (eventEnd.getTime() - eventStart.getTime()) / (1000 * 60);
-                const height = Math.max(40, (duration / 60) * 80);
+                
+                // Calculate the visible portion of the event for this day
+                const visibleStart = isAfter(eventStart, dayStart) ? eventStart : dayStart;
+                const visibleEnd = isBefore(eventEnd, dayEnd) ? eventEnd : dayEnd;
+                
+                // Calculate position and height based on visible portion
+                // Clamp visible times to grid bounds (8:00 - 24:00)
+                const gridStartHour = 8;
+                const gridEndHour = 24;
+                const gridStartTime = setHours(day, gridStartHour);
+                const gridEndTime = setHours(day, gridEndHour);
+                
+                const clampedStart = isAfter(visibleStart, gridStartTime) ? visibleStart : gridStartTime;
+                const clampedEnd = isBefore(visibleEnd, gridEndTime) ? visibleEnd : gridEndTime;
+                
+                // Only render if there's a visible portion within the grid
+                if (clampedStart >= clampedEnd) {
+                  return null;
+                }
+                
+                const visibleStartHour = clampedStart.getHours();
+                const visibleStartMinutes = clampedStart.getMinutes();
+                const top = Math.max(0, (visibleStartHour - gridStartHour) * 80 + (visibleStartMinutes / 60) * 80);
+                
+                // Calculate duration in minutes for the visible portion
+                const durationMinutes = (clampedEnd.getTime() - clampedStart.getTime()) / (1000 * 60);
+                const height = Math.max(20, (durationMinutes / 60) * 80);
+                
+                // Ensure height doesn't exceed grid bounds
+                const maxHeight = (gridEndHour - gridStartHour) * 80 - top;
+                const finalHeight = Math.min(height, maxHeight);
 
                 return (
                   <div
-                    key={event.id}
+                    key={`${event.id}-${day.toISOString()}`}
                     className="absolute left-1 right-1 cursor-pointer"
-                    style={{ top: `${top}px`, height: `${height}px` }}
+                    style={{ top: `${top}px`, height: `${finalHeight}px`, display: 'flex' }}
                     onClick={() => onEventClick(event)}
                   >
                     <EventBlock

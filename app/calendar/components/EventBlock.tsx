@@ -252,14 +252,16 @@ export default function EventBlock({
       onClick={onClick}
       className={`${getEventColor(
         eventColor
-      )} px-3 py-2 rounded-lg text-sm font-semibold cursor-pointer select-none shadow-lg transition-all relative overflow-hidden ${
+      )} h-full w-full px-3 py-2 rounded-lg text-sm font-semibold cursor-pointer select-none shadow-lg transition-all relative overflow-hidden flex flex-col ${
         isResizing ? "ring-2 ring-blue-400" : ""
       }`}
       style={{ backgroundColor: eventColor }}
     >
-      <div className="truncate pr-6">{event.title}</div>
-      <div className="text-[11px] opacity-90 mt-1">
-        {timeFormat(startTime)} - {timeFormat(endTime)}
+      <div className="flex-1 flex flex-col justify-start min-h-0">
+        <div className="truncate pr-6">{event.title}</div>
+        <div className="text-[11px] opacity-90 mt-1">
+          {timeFormat(startTime)} - {timeFormat(endTime)}
+        </div>
       </div>
       
       {/* Top handle - resize start time */}
